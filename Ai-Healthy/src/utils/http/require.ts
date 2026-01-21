@@ -13,3 +13,11 @@ export function get(url:string,params?:any):Promise<APIResponse>{
 export function post(url:string,data?:any):Promise<APIResponse>{
     return http.post(url,data)
 }
+
+export function put(url:string,data?:any):Promise<APIResponse>{
+    return http.put(url,data)
+}
+
+export function deleteReq(url:string,params?:any):Promise<APIResponse>{
+    return http.delete(url,{params})
+}

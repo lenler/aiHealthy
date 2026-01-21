@@ -34,7 +34,16 @@ const mockUsers = [
   }
 ];
 
-// 登录接口
+// --- 用户认证接口 ---
+
+/**
+ * 1. 登录接口
+ * @usage
+ * axios.post('https://localhost:8080/login', {
+ *   username: '13800138000',
+ *   password: 'Test@123'
+ * }).then(res => console.log(res.data));
+ */
 Mock.mock('https://localhost:8080/login', 'post', (req:any) => {
   console.log('req',req);
   
@@ -70,15 +79,106 @@ Mock.mock('https://localhost:8080/login', 'post', (req:any) => {
   }
 })
 
-// 首页数据接口
-/* 
-  1.数据总: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量,总摄入量
-  2.数据详情: 
-        今日早餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-        今日午餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-        今日晚餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-        昨日早餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-        昨日午餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-        昨日晚餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
-  每次返回两天的数据 在mock中模拟
-*/
+// --- 首页数据接口 (Dashboard) ---
+
+/**
+ * 1. 获取首页综合数据 (Dashboard Summary)
+ * @usage
+ * axios.get('https://localhost:8080/dashboard')
+ *   .then(res => console.log(res.data));
+ */
+Mock.mock('https://localhost:8080/dashboard', 'get', () => {
+  const today = new Date().toISOString().split('T')[0]
+  // 计算昨天日期
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = yesterdayDate.toISOString().split('T')[0]
+
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      // 仪表盘汇总
+      summary: {
+        carbs: { current: 50, target: 120, unit: 'g' },
+        protein: { current: 70, target: 100, unit: 'g' },
+        fat: { current: 25, target: 40, unit: 'g' },
+        calories: { current: 900, target: 2000, unit: 'kcal' },
+        totalIntake: 1200
+      },
+      // 今日记录
+      todayRecord: {
+        date: today,
+        meals: {
+          breakfast: { items: ['燕麦拿铁', '全麦面包'], calories: 320 ,img:'https://picsum.photos/200/301'},
+          lunch: { items: ['鸡胸肉沙拉'], calories: 450 ,img:'https://picsum.photos/200/302'},
+          dinner: { items: [], calories: 0,img:'https://picsum.photos/200/303' }
+        }
+      },
+      // 昨日记录
+      yesterdayRecord: {
+        date: yesterday,
+        meals: {
+          breakfast: { items: ['牛奶', '鸡蛋'], calories: 280 ,img:'https://picsum.photos/200/304'},
+          lunch: { items: ['牛肉盖饭'], calories: 600 ,img:'https://picsum.photos/200/305'},
+          dinner: { items: ['水果沙拉'], calories: 150 ,img:'https://picsum.photos/200/306'}
+        }
+      }
+    }
+  }
+})
+
+/**
+ * 2. 新增今日个人详情数据 (Create Record)
+ * @usage
+ * axios.post('https://localhost:8080/records', {
+ *   type: 'breakfast', 
+ *   items: ['苹果'],
+ *   calories: 52
+ * }).then(res => console.log(res.data));
+ */
+Mock.mock('https://localhost:8080/records', 'post', (options: any) => {
+  const body = JSON.parse(options.body)
+  return {
+    code: 201, // Created
+    message: '新增成功',
+    data: { type: body.type, status: 'success' }
+  }
+})
+
+/**
+ * 3. 更新今日指定餐次数据 (Update Record)
+ * @usage
+ * axios.put('https://localhost:8080/records/breakfast', {
+ *   items: ['全麦面包', '牛奶'],
+ *   calories: 400
+ * }).then(res => console.log(res.data));
+ */
+Mock.mock(RegExp('https://localhost:8080/records/(breakfast|lunch|dinner)'), 'put', (options: any) => {
+  const url = options.url
+  const type = url.split('/').pop()
+  const body = JSON.parse(options.body)
+  
+  return {
+    code: 200,
+    message: `${type} 更新成功`,
+    data: { type, updatedItems: body.items }
+  }
+})
+
+/**
+ * 4. 删除今日指定餐次数据 (Delete Record)
+ * @usage
+ * axios.delete('https://localhost:8080/records/breakfast')
+ *   .then(res => console.log(res.data));
+ */
+Mock.mock(RegExp('https://localhost:8080/records/(breakfast|lunch|dinner)'), 'delete', (options: any) => {
+  const url = options.url
+  const type = url.split('/').pop()
+
+  return {
+    code: 200,
+    message: `成功删除今日 ${type} 数据`,
+    data: null
+  }
+})

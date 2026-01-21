@@ -9,7 +9,6 @@ const http= axios.create({
 // 在请求拦截器中 拦截请求并添加请求头
 http.interceptors.request.use((config)=>{
     //如果不做处理 就返回config 如果不返回 就会导致请求失败
-    console.log(config.data)
     //为请求头添加token
     const token=localStorage.getItem('token')
     //如果token不存在 则直接返回config 拒绝请求

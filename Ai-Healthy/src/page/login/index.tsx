@@ -38,7 +38,7 @@ export default function Login() {
         password:value.password
       })
       const {nickname,token}=res.data.data
-      login(token)
+      login(token,nickname)
       sessionStorage.setItem('nickname',nickname)
       setLoading(false)
       message.success('登录成功')

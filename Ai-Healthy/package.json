@@ -13,6 +13,7 @@
     "@tabler/icons-react": "^3.36.1",
     "antd": "^6.2.1",
     "axios": "^1.13.2",
+    "dayjs": "^1.11.19",
     "embla-carousel": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "mockjs": "^1.1.0",
