@@ -1,5 +1,4 @@
 import axios from 'axios'
-import useAuthStore from '../../store/authStore'
 
 // 用来编写基础的http请求 get post put delete
 const http= axios.create({

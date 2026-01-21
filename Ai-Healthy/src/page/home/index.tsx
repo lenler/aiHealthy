@@ -1,10 +1,12 @@
-import React from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom';
+import './index.scss';
+import BottomNav from '../../components/Home/Sider';
 
 export default function Home() {
   return (
-    <div>
-      <Outlet/>
+    <div className="healthyApp">
+      <BottomNav />
+      <Outlet />
     </div>
-  ) 
+  );
 }

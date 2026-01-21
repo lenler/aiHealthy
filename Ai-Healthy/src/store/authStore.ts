@@ -1,7 +1,8 @@
 import { create } from "zustand";
 
 const useAuthStore=create((set)=>({
-    token:'',
+    // 如果localStorage中存在token 则将其赋值给token 否则赋值为空字符串
+    token:localStorage.getItem('token')||'',
     isLogin:false,
 
     login:(token:string)=>{

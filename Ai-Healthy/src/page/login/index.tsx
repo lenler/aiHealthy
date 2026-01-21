@@ -1,4 +1,4 @@
-import { Form, Input, Button, Checkbox, Card, message } from 'antd';
+import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined, HeartOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import './index.scss';
@@ -30,7 +30,7 @@ export default function Login() {
    * 1. 校验表单数据
    * 2. 调用登录接口
    * 3. 登录成功后将token和昵称存到redux和sessionStorage中
-   */
+  */
   function handleLogin(){
     form.validateFields().then( async (value:loginParams)=>{
       const res=await loginApi({

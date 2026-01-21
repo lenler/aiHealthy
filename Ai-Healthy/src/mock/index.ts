@@ -23,9 +23,18 @@ const mockUsers = [
     password: 'User@8888',
     nickname: '养生专家',
     avatar: ''
+  },
+  {
+    id: 4,
+    username: 'admin',
+    email: 'admin@test.com',
+    password: '123123',
+    nickname: '管理员',
+    avatar: ''
   }
 ];
 
+// 登录接口
 Mock.mock('https://localhost:8080/login', 'post', (req:any) => {
   console.log('req',req);
   
@@ -60,3 +69,16 @@ Mock.mock('https://localhost:8080/login', 'post', (req:any) => {
     }
   }
 })
+
+// 首页数据接口
+/* 
+  1.数据总: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量,总摄入量
+  2.数据详情: 
+        今日早餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+        今日午餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+        今日晚餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+        昨日早餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+        昨日午餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+        昨日晚餐: 碳水摄入量,蛋白质摄入量,脂肪摄入量,总能量
+  每次返回两天的数据 在mock中模拟
+*/
