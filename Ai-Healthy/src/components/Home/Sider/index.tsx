@@ -12,13 +12,15 @@ const navItems:MenuItem[] = [
 ];
 export default function BottomNav() {
   const navigate = useNavigate();
+  const openKeys = "/" + location.pathname.split("/")[1];
   const handleClick: MenuProps['onClick'] = (e) => {
     navigate(e.key)
   };
   return (
     <Menu
       className="bottom-nav"
-      defaultOpenKeys={['/']}
+      defaultOpenKeys={[openKeys]}
+      selectedKeys={[location.pathname]}
       mode="inline"
       items={navItems}
       onClick={handleClick}

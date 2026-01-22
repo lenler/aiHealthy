@@ -1,4 +1,4 @@
-import{get,post,put,deleteReq}from'../../utils/http/require'
+import{get,post,put}from'../../utils/http/require'
 
 /**
  * 获取首页大屏数据
@@ -17,7 +17,4 @@ export function updateRecord(type:string,data:any){
     return put(`/records/${type}`,data)
 }
 
-// 删除今日指定餐次数据
-export function deleteRecord(type:string){
-    return deleteReq(`/records/${type}`)
-}
+

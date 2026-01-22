@@ -110,18 +110,18 @@ Mock.mock('https://localhost:8080/dashboard', 'get', () => {
       todayRecord: {
         date: today,
         meals: {
-          breakfast: { items: ['燕麦拿铁', '全麦面包'], calories: 320 ,img:'https://picsum.photos/200/301'},
-          lunch: { items: ['鸡胸肉沙拉'], calories: 450 ,img:'https://picsum.photos/200/302'},
-          dinner: { items: [], calories: 0,img:'https://picsum.photos/200/303' }
+          breakfast: { name: '燕麦拿铁, 全麦面包', calories: 320 ,img:'https://picsum.photos/200/301'},
+          lunch: { name: '鸡胸肉沙拉', calories: 450 ,img:'https://picsum.photos/200/302'},
+          dinner: { name: '', calories: 0,img:'https://picsum.photos/200/303' }
         }
       },
       // 昨日记录
       yesterdayRecord: {
         date: yesterday,
         meals: {
-          breakfast: { items: ['牛奶', '鸡蛋'], calories: 280 ,img:'https://picsum.photos/200/304'},
-          lunch: { items: ['牛肉盖饭'], calories: 600 ,img:'https://picsum.photos/200/305'},
-          dinner: { items: ['水果沙拉'], calories: 150 ,img:'https://picsum.photos/200/306'}
+          breakfast: { name: '牛奶, 鸡蛋', calories: 280 ,img:'https://picsum.photos/200/304'},
+          lunch: { name: '牛肉盖饭', calories: 600 ,img:'https://picsum.photos/200/305'},
+          dinner: { name: '水果沙拉', calories: 150 ,img:'https://picsum.photos/200/306'}
         }
       }
     }
@@ -133,16 +133,18 @@ Mock.mock('https://localhost:8080/dashboard', 'get', () => {
  * @usage
  * axios.post('https://localhost:8080/records', {
  *   type: 'breakfast', 
- *   items: ['苹果'],
- *   calories: 52
+ *   name: '燕麦拿铁, 全麦面包',
+ *   calories: 320
  * }).then(res => console.log(res.data));
  */
 Mock.mock('https://localhost:8080/records', 'post', (options: any) => {
   const body = JSON.parse(options.body)
+  console.log('body',body);
+
   return {
     code: 201, // Created
     message: '新增成功',
-    data: { type: body.type, status: 'success' }
+    data: '新增成功'
   }
 })
 
@@ -150,20 +152,25 @@ Mock.mock('https://localhost:8080/records', 'post', (options: any) => {
  * 3. 更新今日指定餐次数据 (Update Record)
  * @usage
  * axios.put('https://localhost:8080/records/breakfast', {
- *   items: ['全麦面包', '牛奶'],
- *   calories: 400
+ *   name: '燕麦拿铁, 全麦面包',
+ *   calories: 320
  * }).then(res => console.log(res.data));
  */
 Mock.mock(RegExp('https://localhost:8080/records/(breakfast|lunch|dinner)'), 'put', (options: any) => {
-  const url = options.url
-  const type = url.split('/').pop()
   const body = JSON.parse(options.body)
-  
-  return {
+  if(body.name===''||body.calories===0){
+    return {
+      code: 200,
+      message: '删除成功',
+      data: '删除成功'
+    }
+  }else{
+    return {
     code: 200,
-    message: `${type} 更新成功`,
-    data: { type, updatedItems: body.items }
+    message: `更新成功`,
+    data: '更新成功'
   }
+  }  
 })
 
 /**
