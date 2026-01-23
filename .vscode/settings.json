@@ -1,0 +1,21 @@
+{
+    "vsicons.associations.fileDefault.file_light": null,
+    "auto-rename-tag.activationOnLanguage": [
+        "html",
+        "xml",
+        "typescriptreact",
+        "javascriptreact",
+        "typescript",
+        "javascript",
+        "php",
+        "css",
+        "scss",
+        "less",
+        "markdown",
+        "json",
+        "jsonc",
+        "jsx",
+        "tsx",
+        "*"
+    ]
+}

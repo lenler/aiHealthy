@@ -19,7 +19,7 @@ export interface DashboardSummary {
   carbs: MacroInfo;     // 碳水
   protein: MacroInfo;   // 蛋白质
   fat: MacroInfo;       // 脂肪
-  calories: MacroInfo;  // 总能量
+  calories: MacroInfo;  // 总能量 
   totalIntake: number;  // 已摄入总量
 }
 /**
