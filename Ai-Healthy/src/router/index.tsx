@@ -1,7 +1,7 @@
 import React from 'react'
 import {createBrowserRouter} from 'react-router-dom'
 import Personal from '../page/personal'
-import Chat from '../page/chat'
+import Chat from '../page/chat/index'
 import Analysis from '../page/analysis'
 import RouterDefence from '../components/routerDefence'
 const Login=React.lazy(()=>import('../page/login/index'))
