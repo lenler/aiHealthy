@@ -1,29 +1,54 @@
 // import { CameraOutlined, SendOutlined } from '@ant-design/icons'
-import { Button, Card ,Flex,message, Switch, Avatar} from 'antd'
-import { Sender,Actions, Bubble  } from '@ant-design/x';
-import React, { useEffect, useState,useCallback  } from 'react';
-import { PaperClipOutlined} from '@ant-design/icons';
+import { Avatar,Card ,Flex,message} from 'antd'
+import { Actions, Sender,Bubble} from '@ant-design/x';
+import React, {useEffect, useState} from 'react';
+import { AntDesignOutlined} from '@ant-design/icons';
+import { useChat} from '@ai-sdk/react';
+import { getChatHistory } from '../../api/chat';
 
-const SwitchTextStyle = {
-  display: 'inline-flex',
-  width: 28,
-  justifyContent: 'center',
-  alignItems: 'center',
-};
+const actionItems = (content: string) => [
+  {
+    key: 'copy',
+    label: 'copy',
+    actionRender: () => {
+      return <Actions.Copy text={content} />;
+    },
+  },
+];
 
 export default function Chat() {
-  const [deepThink, setDeepThink] = useState<boolean>(true);
-  const [content, setContent] = React.useState('');
-  // const locale = useLocale();
-  // const [provider] = React.useState(
-  //   new DefaultChatProvider<ChatOutput | ChatInput | SystemMessage, ChatInput, ChatOutput>({
-  //     request: XRequest('http://localhost:3001/api/chat', {
-  //       manual: true,
-  //     }),
-  //   }),
-  // );
-  // Chat messages
-
+  const nickname=localStorage.getItem('nickName')
+  const [loading, setLoading] = useState<boolean>(false);
+  const [input, setInput] = React.useState('');
+  const { messages, sendMessage, status, setMessages } = useChat({
+    api: '/api/chat',
+    onFinish: () => {
+      console.log(messages);
+      
+      setLoading(false);
+      console.log('AI 回复已完成');
+    },
+    onError: (err) => {
+      setLoading(false);
+      message.error(`发生错误: ${err.message}`);
+    }
+  });
+  // 在进入页面的时候获取聊天记录 然后渲染
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const res = await getChatHistory();
+        // res.data.data 现在直接就是我们后端转换后的数组
+        if (res.data.data) {
+          setMessages(res.data.data);
+        }
+      } catch (error) {
+        message.error('获取历史记录失败');
+        console.error(error);
+      }
+    }
+    fetchHistory();
+  }, []);
   return (
     <div id="page-chat" className="page-container active">
       <Card className="header-simple">
@@ -33,50 +58,46 @@ export default function Chat() {
       {/* 对话区域 */}
       <div className="chat-area">
         <Flex vertical style={{ height: 720 }} gap="small">
-          
+          {messages.map(message => (
+            <div key={message.id} className="whitespace-pre-wrap">
+              {(message.parts || []).map((part, i) => {
+                  switch (part.type) {
+                    case 'text':
+                    return <Bubble
+                        placement={message.role === 'user' ? "end" : 'start'}
+                        key={`${message.id}-${i}`}
+                        content={part.text}
+                        typing={{ effect: 'fade-in' }}
+                        header={message.role === 'user'?<h5>{nickname}</h5>:<h5>健康助手</h5>}
+                        footer={(content) => (
+                          <Actions items={actionItems(content)} onClick={() => console.log(content)} />
+                        )}
+                        avatar={<Avatar icon={<AntDesignOutlined />} />}
+                      />
+                    default:
+                      return null;
+                  }
+              })}
+            </div>
+          ))}
         </Flex>
       </div>
       <Sender
-        // loading={isRequesting}
-        value={content}
-        onChange={setContent}
-        // onCancel={abort}
-        // placeholder={locale.placeholder}
-        // onSubmit={(nextContent) => {
-        //   onRequest({
-        //     stream: false,
-        //     role: 'user',
-        //     query: nextContent,
-        //   });
-        //   setContent('');
-        // }}
-        footer={() => {
-          return (
-            <Flex justify="space-between" align="center">
-              <Flex gap="small" align="center">
-                {/* 上传图片按钮 */}
-                <Button style={{fontSize:16}} type="text" icon={<PaperClipOutlined />} onClick={() => {
-                  message.info('Click upload!');
-                }} />
-                <Switch
-                  value={deepThink}
-                  checkedChildren={
-                    <div>
-                      Deep Think:<span style={SwitchTextStyle}>on</span>
-                    </div>
-                  }
-                  unCheckedChildren={
-                    <div>
-                      Deep Think:<span style={SwitchTextStyle}>off</span>
-                    </div>
-                  }
-                  onChange={(checked: boolean) => {
-                    setDeepThink(checked);
-                  }}
-                />
-              </Flex>
-            </Flex>
-          );
+        loading={loading}
+        value={input}
+        onChange={(value)=>{
+          setInput(value)
+        }}
+        onCancel={() => {
+          setLoading(false);
+        }}
+        placeholder='请输入你想问的问题'
+        onSubmit={() => {
+          if (!input.trim()) return;
+          if (status === 'streaming' || status === 'submitted') return;
+          setLoading(true);
+          sendMessage({ text: input });
+          setInput('');
         }}
         autoSize={{ minRows: 1, maxRows: 6 }}
       >

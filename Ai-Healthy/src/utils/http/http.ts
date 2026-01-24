@@ -2,8 +2,7 @@ import axios from 'axios'
 
 // 用来编写基础的http请求 get post put delete
 const http= axios.create({
-    baseURL:'https://localhost:8080',
-    timeout:300,
+    timeout: 10000,
 })
 
 // 在请求拦截器中 拦截请求并添加请求头
