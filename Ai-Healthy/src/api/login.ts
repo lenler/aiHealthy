@@ -7,5 +7,5 @@ interface loginParams{
 }
 
 export function loginApi(data:loginParams){
-    return post('/login',data)
+    return post('/api/login/sign_in',data)
 }

@@ -14,9 +14,31 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   ChatHistory.init({
-    sessionId: DataTypes.STRING,
-    role: DataTypes.STRING,
-    content: DataTypes.TEXT
+    sessionId: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        isInt: true
+      }
+    },
+    role: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        isIn: [['user', 'assistant', 'system']]
+      }
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
+    }
   }, {
     sequelize,
     modelName: 'ChatHistory',

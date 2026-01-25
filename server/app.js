@@ -15,9 +15,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+import loginRouter from './routes/login.js'
 import chatRouter from './routes/chat.js' 
+import dashboardRouter from './routes/dashborad.js'
 app.use('/chat', chatRouter);
 app.use('/api/chat', chatRouter);
-
+app.use('/login', loginRouter);
+app.use('/api/login', loginRouter);
+app.use('/api/dashboard', dashboardRouter);
 export default app;
