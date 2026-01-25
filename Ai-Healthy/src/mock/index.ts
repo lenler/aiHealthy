@@ -147,9 +147,8 @@ Mock.mock('https://localhost:8080/records', 'post', (options: any) => {
     data: '新增成功'
   }
 })
-
-/**
- * 3. 更新今日指定餐次数据 (Update Record)
+/**3. 更新今日指定餐次数据 (Update Record)
+ * 
  * @usage
  * axios.put('https://localhost:8080/records/breakfast', {
  *   name: '燕麦拿铁, 全麦面包',

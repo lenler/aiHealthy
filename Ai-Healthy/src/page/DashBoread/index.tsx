@@ -77,6 +77,7 @@ export default function DashBorad() {
     lunch: '午餐',
     dinner: '晚餐'
   };
+  const userId=sessionStorage.getItem('userId')
   /**
    * 辅助函数
    * 获取指定记录的餐次名称,热量,图片的函数
@@ -194,7 +195,7 @@ export default function DashBorad() {
   async function getOverviewData() {
     setLoading(true)
     try {
-      const res = await getOverview()
+      const res = await getOverview(userId!)
       const data = res.data.data
       setSummary(data.summary)
       setTodayRecord(data.todayRecord)

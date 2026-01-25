@@ -4,8 +4,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Op } from 'sequelize';
 import { createRequire } from 'module';
-import chathistory from '../models/chathistory.cjs';
-import { log } from 'console';
 const require = createRequire(import.meta.url);
 const { ChatHistory } = require('../models/index.cjs');
 
@@ -17,8 +15,18 @@ const deepseek = createDeepSeek({
 });
 Router.get('/',async(req,res)=>{
   try{
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ error: '缺少 userId 参数' });
+    }
+    const uid = parseInt(userId, 10);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'userId 必须是数字' });
+    }
+
     const chatHistories = await ChatHistory.findAll({
     where: {
+        userId: uid,
         createdAt: {
           [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
         },
@@ -37,8 +45,10 @@ Router.get('/',async(req,res)=>{
         data: formattedHistories // 直接返回数组
     })
   }catch(error){
-    console.error('获取聊天记录失败:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    res.status(400).json({
+        status:false,
+        message:error.message
+    })
   }
 })
 
@@ -47,8 +57,16 @@ Router.post('/', async (req, res) => {
     if (!process.env.AI_GATEWAY_API_KEY) {
       return res.status(500).json({ error: '缺少环境变量 AI_GATEWAY_API_KEY' });
     }
-    const { messages } = req.body;
-
+    const { messages, userId } = req.body;
+    // console.log(messages);
+    
+    if (!userId) {
+      return res.status(400).json({ error: '缺少 userId 参数' });
+    }
+    const uid = parseInt(userId, 10);
+    if (isNaN(uid)) {
+      return res.status(400).json({ error: 'userId 必须是数字' });
+    }
     if (!Array.isArray(messages)) {
       return res.status(400).json({ error: 'messages 必须是一个数组' });
     }
@@ -79,13 +97,13 @@ Router.post('/', async (req, res) => {
     if(lastMessage){
       await ChatHistory.create({
         sessionId: 'session-001',
+        userId: uid,
         role: lastMessage.role,
         content: lastMessage.content,
       })
     }else{
       console.log('最后一条信息为空')
     }
-
     const result = streamText({
       model: deepseek('deepseek-chat'),
       messages: modelMessages,
@@ -94,6 +112,7 @@ Router.post('/', async (req, res) => {
         try {
           await ChatHistory.create({
             sessionId: 'session-default',
+            userId: uid,
             role: 'assistant',
             content: event.text // event.text 是 AI 回复的完整字符串
           });

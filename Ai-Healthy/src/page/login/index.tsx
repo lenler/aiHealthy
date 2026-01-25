@@ -37,12 +37,16 @@ export default function Login() {
         username:value.username,
         password:value.password
       })
-      const {nickname,token}=res.data.data
-      login(token,nickname)
-      sessionStorage.setItem('nickname',nickname)
+      console.log(res);
+      console.log(res.data.data);
+      const { token, nickName, userId, nickname, id } = res.data.data
+      const resolvedNickName = nickName || nickname || ''
+      const resolvedUserId = userId || id || ''
+      login(token,resolvedNickName,String(resolvedUserId))
+      sessionStorage.setItem('nickname',resolvedNickName)
+      sessionStorage.setItem('userId',String(resolvedUserId))
       setLoading(false)
       message.success('登录成功')
-      //登录成功后跳转到首页
       navigator('/')
     }).catch((err)=>{
       setLoading(false)

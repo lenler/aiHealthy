@@ -13,6 +13,16 @@ module.exports = {
         allowNull: false,
         type: Sequelize.STRING
       },
+      userId: {
+        allowNull: false,
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       role: {
         allowNull: false,
         type: Sequelize.STRING
