@@ -1,0 +1,326 @@
+@keyframes analysisFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.analysis-page {
+  display: flex;
+  flex-direction: column;
+  background-color: #f6f8f6;
+  min-height: 100vh;
+  animation: analysisFadeIn 0.3s ease;
+}
+
+.analysis-main {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  flex: 1;
+}
+
+/* Header Section Card */
+.analysis-top-card {
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.analysis-layout { }
+
+/* Custom Card Styling */
+.hover-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #f0f0f0;
+  border-radius: 16px !important;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08);
+    border-color: #d9f7be;
+  }
+
+  .ant-card-head {
+    border-bottom: 1px solid #f5f5f5;
+    min-height: 56px;
+    background: #fff;
+  }
+
+  .ant-card-head-title {
+    font-weight: 600;
+    font-size: 16px;
+  }
+}
+
+/* Date Picker Customization */
+.date-picker-wrapper {
+  background: #fff;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: #52c41a;
+    box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
+  }
+}
+
+/* Statistic Card Enhancement */
+.ant-statistic-title {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.ant-statistic-content-value {
+  font-weight: 700;
+}
+
+/* Progress Bar Customization */
+.ant-progress-bg {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Upload Dragger Customization */
+.ant-upload.ant-upload-drag {
+  background: #fafafa;
+  border: 2px dashed #d9d9d9;
+  border-radius: 12px;
+  transition: all 0.3s;
+  
+  &:hover {
+    border-color: #52c41a;
+    background: #f6ffed;
+  }
+  
+  .ant-upload-drag-icon .anticon {
+    color: #52c41a;
+    transition: all 0.3s;
+  }
+  
+  &:hover .ant-upload-drag-icon .anticon {
+    transform: scale(1.1);
+  }
+}
+
+/* List Item Customization */
+.ant-list-item {
+  padding: 16px !important;
+  transition: background 0.2s;
+  border-radius: 8px;
+  
+  &:hover {
+    background: #fafafa;
+  }
+}
+
+.ant-list-item-meta-title {
+  font-weight: 600;
+  margin-bottom: 4px !important;
+}
+
+.ant-list-item-meta-description {
+  font-size: 12px;
+}
+
+/* Meal Group Inner Cards - Kept for reference but mostly replaced by new structure */
+.analysis-meals .ant-card-type-inner {
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+  margin-bottom: 20px;
+  
+  .ant-card-head {
+    background: #fafafa;
+    border-bottom: none;
+    font-size: 14px;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+}
+
+/* Food Item Card Design */
+.food-item-card {
+  border-radius: 12px !important;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 100%; /* Full width for the new layout */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+
+  &:hover {
+    border-color: #b7eb8f;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+
+    .food-actions {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    img {
+      transform: scale(1.05);
+    }
+  }
+
+  .food-image-wrapper {
+    position: relative;
+    height: 180px; /* Slightly taller */
+    overflow: hidden;
+    background: #f5f5f5;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .food-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: all 0.3s ease;
+      z-index: 2;
+    }
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  .food-info {
+    .food-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+
+      .food-name {
+        font-size: 16px;
+        color: #262626;
+        flex: 1;
+        margin-right: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .ant-tag {
+        margin: 0;
+        font-size: 11px;
+        line-height: 18px;
+      }
+    }
+
+    .food-footer {
+      display: flex;
+      align-items: center;
+      
+      .food-calories {
+        font-size: 14px;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+/* Meal Section Layout */
+.meal-section {
+  margin-bottom: 32px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.meal-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.meal-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  img {
+    width: 20px;
+    height: 20px;
+  }
+  
+  &.breakfast { background: #fff7e6; }
+  &.lunch { background: #fff0f6; }
+  &.dinner { background: #e6f7ff; }
+}
+
+.meal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.meal-calories-badge {
+  background: #f5f5f5;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.empty-meal-placeholder {
+  border: 2px dashed #e8e8e8;
+  border-radius: 12px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+  
+  &:hover {
+    border-color: #b7eb8f;
+    background: #f6ffed;
+    
+    .ant-typography {
+      color: #52c41a;
+    }
+    
+    .anticon {
+      color: #52c41a !important;
+    }
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .analysis-main {
+    padding: 16px;
+  }
+  
+  .analysis-top-card {
+    padding: 16px;
+  }
+  
+  .ant-col { }
+}

@@ -18,9 +18,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 import loginRouter from './routes/login.js'
 import chatRouter from './routes/chat.js' 
 import dashboardRouter from './routes/dashborad.js'
+import analysisRouter from './routes/analysis.js'
 app.use('/chat', chatRouter);
 app.use('/api/chat', chatRouter);
 app.use('/login', loginRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/analysis', analysisRouter);
 export default app;
