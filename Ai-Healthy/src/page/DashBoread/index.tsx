@@ -1,6 +1,6 @@
 import { Card, Progress, Row, Col, Typography, Avatar, Skeleton, Spin} from 'antd'
 import dayjs from 'dayjs'
-import { getOverview, updateRecord} from '../../api/dashboard/index'
+import { getOverview, updateRecord, removeRecord} from '../../api/dashboard/index'
 import { useEffect, useState } from 'react'
 import RecordCard from '../../components/dashborad/recordCard'
 import './index.scss'
@@ -77,7 +77,7 @@ export default function DashBorad() {
     lunch: '午餐',
     dinner: '晚餐'
   };
-  const userId=sessionStorage.getItem('userId')
+  const userId=localStorage.getItem('userId')
   /**
    * 辅助函数
    * 获取指定记录的餐次名称,热量,图片的函数
@@ -208,7 +208,8 @@ export default function DashBorad() {
   }
   async function deleteRecord(type:string){
     try{
-      const res=await updateRecord(type,{name:'',calories:0})
+      if(!userId) return
+      const res=await removeRecord(userId, type)
       console.log(res.data.data);
       refresh()
     }catch(error){
@@ -338,7 +339,7 @@ export default function DashBorad() {
           </Card>
         </div>}
         {/* 模态框 */}
-        <RecordForm showCancel={showCancel} isModalOpen={isModalOpen} type={type||'breakfast'} name={name||''} calories={calories||0} setDataNull={setDataNull} setData={setData} refresh={refresh} isUpdate={isUpdate} /> 
+        <RecordForm showCancel={showCancel} isModalOpen={isModalOpen} type={type||'breakfast'} name={name||''} calories={calories||0} setDataNull={setDataNull} setData={setData} refresh={refresh} isUpdate={isUpdate} userId={userId||''}/> 
     </div>
   )
 }

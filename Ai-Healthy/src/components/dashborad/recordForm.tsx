@@ -1,6 +1,7 @@
 import {Modal,  Form, Input ,Row,Col,Radio} from 'antd'
 import { updateRecord,createRecord } from '../../api/dashboard/index'
 import { useEffect } from 'react'
+
 export interface FieldType{
     type:number,//后面映射成对应关系
     name:string,
@@ -19,6 +20,7 @@ interface RecordCardProps {
   setData:(type:string,name:string,calories:number)=>void;
   refresh:()=>void;
   isUpdate:boolean;
+  userId:string;
 }
 export default function RecordForm({showCancel,isModalOpen,
   type, 
@@ -28,7 +30,8 @@ export default function RecordForm({showCancel,isModalOpen,
   setDataNull,
   setData,
   refresh,
-  isUpdate
+  isUpdate,
+  userId
 }:RecordCardProps) {
   // 有个失误 餐次应该是不可编辑的
   const [form]=Form.useForm<FieldType>()
@@ -56,16 +59,15 @@ export default function RecordForm({showCancel,isModalOpen,
         // 更新本地状态
         setData(type, values.name, values.calories);
         // 发送请求
-        await updateData(type, {name: values.name, calories: values.calories});
+        await updateData({foodName:values.name,calories:values.calories,mealType:type});
         showCancel();
       }else{
         console.log('新增操作');
-        
         const values = await form.validateFields();
         // 更新本地状态
         setData(type, values.name, values.calories);
         // 发送请求
-        await createNewRecord(type, values.name, values.calories);
+        await createNewRecord(type, values.name, values.calories,userId);
         showCancel();
       }
       
@@ -80,9 +82,9 @@ export default function RecordForm({showCancel,isModalOpen,
   };
 
   // 更新指定记录 迫于无奈 只能将刷新数据的函数写在这了
-  async function updateData(type:string,data:{name:string,calories:number}) {
+  async function updateData({foodName,calories,mealType}:{foodName:string,calories:number,mealType:string}) {
     try{
-      const res=await updateRecord(type,data)
+      const res=await updateRecord(userId,{foodName,calories,mealType})
       console.log(res.data.data);
       // 刷新数据
       refresh()
@@ -90,11 +92,10 @@ export default function RecordForm({showCancel,isModalOpen,
       console.log(error)
     }
   }
-
   // 新增指定记录
-  async function createNewRecord(type:string,name:string,calories:number) {
+  async function createNewRecord(mealType:string,foodName:string,calories:number,userId:string) {
     try{
-      const res=await createRecord({type,name,calories})
+      const res=await createRecord(userId,{mealType,foodName,calories})
       console.log(res.data.data);
       refresh()
     }catch(error){

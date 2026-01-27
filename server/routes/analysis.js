@@ -1,11 +1,17 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv';//用来加载环境变量的中间件
+import path from 'path';//处理路径的中间件
+import fs from 'fs';//处理文件读取的中间件
 import { createRequire } from 'module';
-import { Op } from 'sequelize';
 const require = createRequire(import.meta.url);
-const { User, Record,MealItem } = require('../models/index.cjs');
+const multer = require('multer');//用来处理文件上传的中间件
+const { MealItem } = require('../models/index.cjs');
 dotenv.config();
-const Router = express.Router();
+/**
+ * 所有辅助函数
+ * @param {*} type 
+ * @returns 
+ */
 // 格式转换 避免前端传入小写字母导致请求不能通过数据库模型验证
 function normalizeMealType(type){
     if(!type){
@@ -26,64 +32,76 @@ function normalizeMealType(type){
     }
     return type
 }
+const formatMeals = (meals) => {
+    const getMeal = (type) => {
+        const meal = meals.find(m => m.mealType && m.mealType.toLowerCase() === type);
+        return meal ? {
+            name: meal.foodName || '',
+            calories: meal.calories || 0,
+            img: meal.imgUrl || ''
+        } : { name: '', calories: 0, img: '' };
+    };
+    return {
+        breakfast: getMeal('breakfast'),
+        lunch: getMeal('lunch'),
+        dinner: getMeal('dinner')
+    };
+};
+// 配置 multer 存储 
+// 拼接上传文件保存目录：项目根目录/public/uploads
+const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+// 递归创建目录（若不存在）
+fs.mkdirSync(uploadDir, { recursive: true });
+// 配置 multer 磁盘存储规则
+const storage = multer.diskStorage({
+    // 文件保存路径
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    // 生成唯一文件名：字段名-时间戳-随机数.原扩展名
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
+const Router = express.Router();
+
+/**
+ * 上传图片
+ */
+Router.post('/upload', upload.single('file'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ status: false, message: '未上传文件' });
+        }
+        //临时将图片存储到文件夹中 后续会直接发送给ai
+        const fileUrl = `/uploads/${req.file.filename}`;
+        return res.status(200).json({
+            status: true,
+            message: '上传成功',
+            url: fileUrl
+        });
+    } catch (error) {
+        return res.status(500).json({ status: false, message: error.message });
+    }
+});
+
 /**
  * 1.获取首页综合数据
  */
-Router.get('/:userId',async(req,res)=>{
+Router.post('/dashborad/:userId',async(req,res)=>{
     try{
         const userId=req.params.userId
-        const today = new Date().toISOString().split('T')[0]
-        const yesterdayDate = new Date()
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1)
-        const yesterday = yesterdayDate.toISOString().split('T')[0]
+        const date=req.body.currentDate || new Date().toISOString().split('T')[0]
         const todayMeal=await MealItem.findAll({
             where:{
                 userId:userId,
-                date: today
+                date: date
             }
         })
         
-        const yesterdayMeal=await MealItem.findAll({
-            where:{
-                userId:userId,
-                date: yesterday
-            }
-        })
-
-        const formatMeals = (meals) => {
-            const getMeal = (type) => {
-                const meal = meals.find(m => m.mealType && m.mealType.toLowerCase() === type);
-                return meal ? {
-                    name: meal.foodName || '',
-                    calories: meal.calories || 0,
-                    img: meal.imgUrl || ''
-                } : { name: '', calories: 0, img: '' };
-            };
-            return {
-                breakfast: getMeal('breakfast'),
-                lunch: getMeal('lunch'),
-                dinner: getMeal('dinner')
-            };
-        };
-
-        const data={
-            // 死数据 模拟数据
-            summary:{
-                carbs: { current: 50, target: 120, unit: 'g' },
-                protein: { current: 70, target: 100, unit: 'g' },
-                fat: { current: 25, target: 40, unit: 'g' },
-                calories: { current: 900, target: 2000, unit: 'kcal' },
-                totalIntake: 1200
-            },
-            todayRecord:{
-                date:today,
-                meals: formatMeals(todayMeal)
-            },
-            yesterdayRecord:{
-                date:yesterday,
-                meals: formatMeals(yesterdayMeal)
-            }
-        }
+        const data=todayMeal
         return res.status(200).json({
             status:true,
             message:'查询成功',
@@ -144,44 +162,6 @@ Router.put('/:userId',async(req,res)=>{
         })
     }catch(error){
         console.log('更新失败',error.message)
-        res.status(400).json({
-            status:false,
-            message:error.message
-        })
-    }
-})
-
-Router.delete('/:userId',async(req,res)=>{
-    try{
-        const userId=req.params.userId
-        const mealType = req.body.mealType || req.query.mealType
-        if(!userId){
-            return res.status(400).json({
-                status:false,
-                message:'用户ID不能为空'
-            })
-        }
-        const normalizedMealType=normalizeMealType(mealType)
-        if(!normalizedMealType){
-            return res.status(400).json({
-                status:false,
-                message:'mealType不能为空'
-            })
-        }
-        const condition={
-            userId,
-            date: new Date().toISOString().split('T')[0],
-            mealType:normalizedMealType
-        }
-        await MealItem.destroy({
-            where:condition
-        })
-        return res.status(200).json({
-            status:true,
-            message:'删除成功'
-        })
-    }catch(error){
-        console.log('删除失败',error.message)
         res.status(400).json({
             status:false,
             message:error.message
@@ -250,5 +230,4 @@ Router.post("/:userId",async(req,res)=>{
         })
     }
 })
-
 export default Router

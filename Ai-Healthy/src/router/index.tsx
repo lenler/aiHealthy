@@ -31,7 +31,12 @@ const router=createBrowserRouter([
             },{
                 path:'/analysis',
                 element:<Analysis/>
-            }
+            },
+/*             {
+                // 健康档案页面
+                path:'/',
+                element:<Record/>
+            } */
         ]
     },{
         path:'*',
