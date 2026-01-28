@@ -55,37 +55,6 @@ const mealGroups: MealGroup[] = [
     imgUrl:'https://picsum.photos/200/301',
   },
 ];
-const initialDraftData: AIDraftItem[] = [
-  { key: '1', foodName: '香煎三文鱼', calories: 280 },
-  { key: '2', foodName: '西兰花', calories: 45 },
-  { key: '3', foodName: '糙米饭（200g）', calories: 220},
-];
-const uploadProps: UploadProps = {
-  name: 'file',
-  multiple: false,//一次只能上传一张
-  showUploadList: true,
-  accept: 'image/*',
-  // 自定义上传逻辑：将图片文件上传至服务器
-  async customRequest({ file, onSuccess, onError }) {
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await uploadImage(formData);
-      if (res.data.status) {
-        message.success('图片上传成功');
-        // 这里可以保存返回的 url 到状态中，以便后续提交表单使用
-        console.log('Uploaded file URL:', res.data.url);
-        onSuccess?.(res.data);
-      } else {
-        message.error(res.data.message || '上传失败');
-        onError?.(new Error(res.data.message));
-      }
-    } catch (err: any) {
-      message.error('上传过程中发生错误');
-      onError?.(err);
-    }
-  }
-};
 const draftColumns = [
   {
     title: '食物名称',
@@ -101,20 +70,55 @@ const draftColumns = [
 export default function Analysis() {
   const userId=localStorage.getItem('userId');
   const [mealData,setMealdata]=useState<MealGroup[]>(mealGroups)
-  const [hasData,setHasData]=useState(true)
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs(new Date()));
   const [mealType, setMealType] = useState<string>("Dinner");
-  const [draftData, setDraftData] = useState<AIDraftItem[]>(initialDraftData);
+  const [draftData, setDraftData] = useState<AIDraftItem[]>([]);
   const [currentCalories, setCurrentCalories] = useState<number>(0);// 当前卡路里
   const [targetCalories, setTargetCalories] = useState<number>(2000);// 目标卡路里
   const [caloriePercent, setCaloriePercent] = useState<number>(0);// 卡路里占比
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>(initialDraftData.map((item) => item.key));
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>();
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: Key[]) => setSelectedRowKeys(keys),
     columnTitle: '选择',
   };
+  const [imgUrl,setImgUrl]=useState('')
   const isToday = currentDate.format('YYYY-MM-DD') === dayjs(new Date()).format('YYYY-MM-DD');//判断当前选中的日期是否是今日 如果不是 禁用更新数据
+  const uploadProps: UploadProps = {
+    name: 'file',
+    multiple: false,
+    maxCount: 1,
+    showUploadList: true,
+    accept: 'image/*',
+    async customRequest({ file, onSuccess, onError }) {
+      const formData = new FormData();
+      formData.append('file', file as any);
+      try {
+        const res = await uploadImage(formData);
+        if (res.data.status) {
+          // 获取识别结果 识别结果中包含识别到的食物和卡路里 后端返回的结果中返回了上传的url
+          const items = Array.isArray(res.data?.data?.items) ? res.data.data.items : [];
+          // 获取用于识别的图片地址
+          setImgUrl(res.data.data.url || '')
+          const nextDraftData: AIDraftItem[] = items.map((it: any, idx: number) => ({
+            key: String(idx + 1),
+            foodName: String(it?.foodName || '未知'),
+            calories: Number.isFinite(it?.calories) ? Math.trunc(it.calories) : parseInt(String(it?.calories || 0), 10) || 0,
+          }));
+          setDraftData(nextDraftData);
+          setSelectedRowKeys(nextDraftData.map((d) => d.key));
+          message.success('识别成功');
+          onSuccess?.(res.data);
+          return;
+        }
+        message.error(res.data.message || '识别失败');
+        onError?.(new Error(res.data.message));
+      } catch (err: any) {
+        message.error('识别过程中发生错误');
+        onError?.(err);
+      }
+    }
+  };
   /**
    * 格式化获取到的三餐数据
    * @param data 
@@ -163,25 +167,27 @@ export default function Analysis() {
     // 确定后将获取的数据整合 然后发送给后端
     let thisFoodName:string=''
     let thisCalories:number=0;
-    draftData.forEach((item)=>{
-      thisFoodName+=item.foodName+'+'
-      thisCalories+=item.calories;
+    // 使用set数据结构保证每个记录只会出现一次
+    const selectedKeySet = new Set(selectedRowKeys);
+    const selectedItems = draftData.filter((item) => selectedKeySet.has(String(item.key)));
+    if (selectedItems.length === 0) {
+      message.warning('请先选择要添加的食物');
+      return;
+    }
+    selectedItems.forEach((item, index)=>{
+      thisFoodName += item.foodName + (index < selectedItems.length - 1 ? '+' : '');
+      thisCalories += item.calories;
     })
-    // 发送请求 如果数据已经存在 就发送更新请求
-    // 因为我们不能直接向数据库发出访问 所以我们可以借用前端请求获取今日的数据 来判断是否存在对应餐次
-    mealData.forEach(item=>{
-      if(item.mealType!=mealType){
-        setHasData(false)
-      }
-    })
+    //改用some方法来查询是否存在同餐次
+    const exists = mealData.some((item) => item.mealType === mealType);
     try{
-      if(!hasData){
-        const res=await updateRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType})
+      if(exists){
+        const res=await updateRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
         if(!res){
           console.log('请求失败请重新请求');
         }
       }else{
-        const res=await createRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType})
+        const res=await createRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
         if(!res){
           console.log('请求失败请重新请求');  
         }
@@ -190,6 +196,8 @@ export default function Analysis() {
       message.error('更新失败');
       console.log(err);
     }finally{
+      // 清空图片url
+      setImgUrl('');
       reLoadData(currentDate.format('YYYY-MM-DD'))
     }
   }
@@ -199,6 +207,7 @@ export default function Analysis() {
   function handleClearDraft(){
     setDraftData([]);
     setSelectedRowKeys([]);
+    setImgUrl('');
   };
   useEffect(()=>{
     // 初始化时 刷新数据
@@ -288,12 +297,12 @@ export default function Analysis() {
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined style={{ color: '#13ec5b', fontSize: 48 }} />
                 </p>
-                <p className="ant-upload-text">点击或拖拽上传饮食照片</p>
+                <p className="ant-upload-text">点击或拖拽上传饮食照片,上传后立即识别</p>
                 <p className="ant-upload-hint">支持 JPG、PNG 格式，识别更精准</p>
               </Dragger>
               <div style={{ marginBottom: 24 }}>
                 <Row gutter={16}>
-                  <Col span={12}>
+                  <Col span={24}>
                     <Select
                       value={mealType}
                       onChange={setMealType}
@@ -306,18 +315,6 @@ export default function Analysis() {
                       <Option value="Dinner">晚餐</Option>
                     </Select>
                   </Col>
-                  <Col span={12}>
-                    <Button
-                      type="primary"
-                      block
-                      size="large"
-                      icon={<ThunderboltOutlined />}
-                      /* onClick={handleRecognize} */
-                      style={{ background: 'linear-gradient(135deg, #13ec5b 0%, #00b96b 100%)', border: 'none' }}
-                    >
-                      开始识别
-                    </Button>
-                  </Col>
                 </Row>
               </div>
 
@@ -325,7 +322,7 @@ export default function Analysis() {
               <Card
                 size="small"
                 title={`识别结果 (${draftData.length})`}
-                extra={<Button type="link" icon={<ReloadOutlined />}/*  onClick={handleRecognize} */>重新识别</Button>}
+                extra={"识别不准确可重新识别"}
                 style={{ background: '#f9f9f9', borderRadius: 8 }}
               >
                 <Table
@@ -342,7 +339,7 @@ export default function Analysis() {
                     type="primary"
                     block
                     onClick={handleConfirmAdd}
-                    disabled={!isToday || !selectedRowKeys.length}
+                    disabled={!isToday}
                     style={{ height: 40, borderRadius: 20 ,backgroundColor:'#13ec5b'}}
                   >
                     确认添加到 {mealType}

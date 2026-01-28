@@ -28,6 +28,11 @@ function normalizeMealType(type){
 }
 /**
  * 1.获取首页综合数据
+ *{
+    breakfast: { name:string,calories:number},
+    lunch: { name:string,calories:number},
+    dinner: { name:string,calories:number}
+ * } 
  */
 Router.get('/:userId',async(req,res)=>{
     try{

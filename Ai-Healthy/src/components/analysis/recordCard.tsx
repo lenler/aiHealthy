@@ -30,7 +30,7 @@ export default function RecordCard({group}:{group:any}) {
                 <img
                 draggable={false}
                 alt={group.foodName}
-                src={group.imgUrl}
+                src={group.imgUrl || null}
                 />
                 <div className="food-actions">
                 <Button size="small" shape="circle" icon={<EditOutlined />} />
