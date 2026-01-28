@@ -247,7 +247,7 @@ export default function DashBorad() {
                   percent={summary?.calories.current?summary?.calories.current/summary?.calories.target*100:0}
                   size={120}
                   strokeColor="#10b981"
-                  trailColor="#e2e8f0"
+                  railColor="#e2e8f0"
                   format={() => (
                     <div className="ringText">
                       <strong>{summary?.calories.current}</strong>
@@ -274,7 +274,7 @@ export default function DashBorad() {
                             percent={data ? (data.current / data.target) * 100 : 0}
                             showInfo={false}
                             strokeColor={item === 'carbs' ? '#fbbf24' : item === 'protein' ? '#60a5fa' : '#10b981'}
-                            trailColor="#e2e8f0"
+                            railColor="#e2e8f0"
                             size="small"
                           />
                         </div>

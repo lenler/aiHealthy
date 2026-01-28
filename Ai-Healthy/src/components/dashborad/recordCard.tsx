@@ -66,7 +66,7 @@ export default function RecordCard({
     <Card
       className='recordCard'
       hoverable
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
       cover={
         <div style={{ height: '140px', overflow: 'hidden', position: 'relative', backgroundColor: '#f5f5f5' }}>
           {imageUrl ? (
@@ -74,7 +74,7 @@ export default function RecordCard({
               alt={title}
               src={imageUrl}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              wrapperStyle={{ width: '100%', height: '100%' }}
+              styles={{ root: { width: '100%', height: '100%' } }}
               // preview={false}
             />
           ) : (
