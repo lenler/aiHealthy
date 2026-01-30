@@ -6,8 +6,8 @@ interface APIResponse{
     data:any
 }
 
-export function get(url:string,params?:any,):Promise<APIResponse>{
-    return http.get(url,{params})
+export function get(url:string,params?:any, config:any = {}):Promise<APIResponse>{
+    return http.get(url,{params, ...config})
 }
 
 export function post(url:string,data?:any):Promise<APIResponse>{

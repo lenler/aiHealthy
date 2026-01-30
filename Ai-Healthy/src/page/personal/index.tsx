@@ -1,10 +1,19 @@
 import { Card ,Avatar, Button} from "antd";
 import { useNavigate } from "react-router";
 import useAuthStore from "../../store/authStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AccountForm from "../../components/personal/accountForm";
 import HealthyForm from "../../components/personal/healthyForm";
+import { getHealthyInfo } from "../../api/person";
 
+interface HealthyInfo{
+  userID:number,
+  height:number,
+  weight:number,
+  age:number,
+  sex:number,
+  bodyStatus:string,
+}
 const settingItem=[
   {
     key:'account',
@@ -27,6 +36,7 @@ export default function Personal() {
   const logout=useAuthStore((state:any)=>state.logout)
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isHealthyModalOpen, setIsHealthyModalOpen] = useState(false);
+  const [healthyInfo, setHealthyInfo] = useState<HealthyInfo>()
   const userId=localStorage.getItem('userId')
   const navigator=useNavigate()
 
@@ -58,6 +68,15 @@ export default function Personal() {
       openModalForm(key)
     }
   }
+  useEffect(()=>{
+    // 从后端获取用户的健康信息
+    async function getUserHealth() {
+      const res=await getHealthyInfo(userId!)
+      const data = res.data.data
+      setHealthyInfo(data)
+    }
+    getUserHealth()
+  },[userId])
   return (
     <div id="page-me" className="page-container active">
       <Card className="profile-card">
@@ -65,15 +84,21 @@ export default function Personal() {
         <h2>{nickName}</h2>
         <p className="profile-subtitle">希望你的每一天都如此健康</p>
         <div className="stat-row">
-          <div className="stat-item">
-            <h3>72.5</h3><span>当前(kg)</span>
-          </div>
-          <div className="stat-item">
-            <h3>65.0</h3><span>目标(kg)</span>
-          </div>
-            <div className="stat-item">
-            <h3>12</h3><span>打卡(天)</span>
-          </div>
+          {
+            healthyInfo && (
+              <>
+                <div className="stat-item">
+                  <h3>{healthyInfo.weight}</h3><span>当前体重(kg)</span>
+                </div>
+                <div className="stat-item">
+                  <h3>{healthyInfo.height}</h3><span>当前身高(m)</span>
+                </div>
+                <div className="stat-item">
+                  <h3>{Number(healthyInfo.weight/(healthyInfo.height*healthyInfo.height/10000)).toFixed(1)}</h3><span>当前bim值</span>
+                </div>
+              </>
+            )
+          }
         </div>
         </Card>
         <Card className="settings-list">

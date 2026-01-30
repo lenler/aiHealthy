@@ -22,4 +22,7 @@ export function removeRecord(userId:string,mealType:string){
     return deleteReq(`/api/dashboard/${userId}`,{mealType})
 }
 
+export function getAiAdvice(userId:string){
+    return get(`/api/dashboard/advice/${userId}`)
+}
 
