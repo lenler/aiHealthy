@@ -54,7 +54,6 @@ export default function RecordForm({showCancel,isModalOpen,
       // 判断是新增还是更新
       if(isUpdate){
         console.log('更新操作');
-        
         const values = await form.validateFields();
         // 更新本地状态
         setData(type, values.name, values.calories);
@@ -122,7 +121,7 @@ export default function RecordForm({showCancel,isModalOpen,
         form={form}
       >
         <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
              <Form.Item
                 label="餐次"
                 name="type" 
@@ -135,7 +134,7 @@ export default function RecordForm({showCancel,isModalOpen,
                 </Radio.Group>
               </Form.Item>
             </Col>
-          <Col span={12}>
+          <Col span={24}>
              <Form.Item
                 label="名称" 
                 name="name"
@@ -144,7 +143,7 @@ export default function RecordForm({showCancel,isModalOpen,
                 <Input />
               </Form.Item>
           </Col> 
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
                 label="卡路里" 
                 name="calories"
@@ -154,7 +153,7 @@ export default function RecordForm({showCancel,isModalOpen,
               </Form.Item>
           </Col>
           {/*由于技术原因 暂时不考虑上传图片 等待后续技术迭代
-           <Col span={12}>
+           <Col span={24}>
             <Form.Item
                 label="图片" 
                 name="img"

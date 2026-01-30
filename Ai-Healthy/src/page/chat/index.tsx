@@ -1,12 +1,13 @@
 import { Avatar,Card ,Flex,message} from 'antd'
 import { Actions, Sender,Bubble} from '@ant-design/x';
 import React, {useEffect, useState} from 'react';
-import { AntDesignOutlined} from '@ant-design/icons';
+import { AntDesignOutlined,DeleteOutlined} from '@ant-design/icons';
 import { useChat} from '@ai-sdk/react';
-import { getChatHistory } from '../../api/chat';
+import { getChatHistory, deleteChatHistory } from '../../api/chat';
 import useAuthStore from '../../store/authStore';
 import type { GetRef } from 'antd';
-const actionItems = (content: string) => [
+
+const actionItems = (content: string, onConfirmDelete: () => void) => [
   {
     key: 'copy',
     label: 'copy',
@@ -14,7 +15,17 @@ const actionItems = (content: string) => [
       return <Actions.Copy text={content} />;
     },
   },
+  {
+    key: 'delete',
+    label: 'Delete',
+    icon: <DeleteOutlined />,
+    onItemClick: () => {
+      onConfirmDelete();
+    },
+    danger: true,
+  }
 ];
+
 export default function Chat() {
   const nickname=localStorage.getItem('nickName')
   const [loading, setLoading] = useState<boolean>(false);
@@ -26,12 +37,32 @@ export default function Chat() {
     onFinish: () => {  
       setLoading(false);
       console.log('AI 回复已完成');
+      // 重新获取最新的聊天记录以确保有正确的 ID
+      if (userId) {
+         getChatHistory({userId}).then(res => {
+            if (res.data.data) {
+                setMessages(res.data.data);
+            }
+         });
+      }
     },
     onError: (err) => {      
       setLoading(false);
       message.error(`发生错误: ${err.message}`);
     }
   });
+
+  const handleDeleteMessage = async (msgId: string | number) => {
+    try {
+        await deleteChatHistory(msgId);
+        // 更新本地状态，移除已删除的消息
+        setMessages(messages.filter(m => m.id !== msgId));
+        message.success('删除成功');
+    } catch (error) {
+        console.error(error);
+        message.error('删除失败');
+    }
+  };
   
   // 在进入页面的时候获取聊天记录 然后渲染
   useEffect(() => {
@@ -63,28 +94,33 @@ export default function Chat() {
       {/* 对话区域 */}
       <div className="chat-area">
         <Flex vertical style={{ height: 720 }} gap="small">
-          {messages.map(message => (
-            <div key={message.id} className="whitespace-pre-wrap">
-              {(message.parts || []).map((part, i) => {
+          {messages.map((message)=>{
+            return (
+              <div  className="whitespace-pre-wrap">
+                {(message.parts || []).map((part, i) => {
                   switch (part.type) {
                     case 'text':
                     return <Bubble
-                        placement={message.role === 'user' ? "end" : 'start'}
-                        key={`${message.id}-${i}`}
-                        content={part.text}
-                        typing={{ effect: 'fade-in' }}
-                        header={message.role === 'user'?<h5>{nickname}</h5>:<h5>健康助手</h5>}
-                        footer={(content) => (
-                          <Actions items={actionItems(content)} onClick={() => console.log(content)} />
-                        )}
-                        avatar={<Avatar icon={<AntDesignOutlined />} />}
+                      placement={message.role === 'user' ? "end" : 'start'}
+                      key={`${i}`}
+                      content={part.text}
+                      typing={{ effect: 'fade-in' }}
+                      header={message.role === 'user'?<h5>{nickname}</h5>:<h5>健康助手</h5>}
+                      footer={(content,) => (
+                        <>
+                          <Actions items={actionItems(content, () => handleDeleteMessage(message.id))} onClick={() => console.log(content)} />
+                        </>
+                      )}
+                      avatar={<Avatar icon={<AntDesignOutlined />} />}
                       />
                     default:
                       return null;
                   }
-              })}
-            </div>
-          ))}
+                })}
+             </div>
+            )
+          })
+          }
         </Flex>
       </div>
       <Sender

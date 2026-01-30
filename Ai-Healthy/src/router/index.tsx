@@ -4,6 +4,7 @@ import Personal from '../page/personal'
 import Chat from '../page/chat/index'
 import Analysis from '../page/analysis'
 import RouterDefence from '../components/routerDefence'
+import Register from '../page/register'
 const Login=React.lazy(()=>import('../page/login/index'))
 const Home=React.lazy(()=>import('../page/home/index'))
 const NotFound=React.lazy(()=>import('../page/NotFound/index'))
@@ -14,8 +15,13 @@ const router=createBrowserRouter([
         element:<Login/>
     },
     {
+        path:'/register',
+        element:<Register/>,
+    },
+    {
         path:'/',
-        element:<RouterDefence>
+        element:
+        <RouterDefence>
                 <Home/>
         </RouterDefence>,
         children:[
@@ -32,11 +38,6 @@ const router=createBrowserRouter([
                 path:'/analysis',
                 element:<Analysis/>
             },
-/*             {
-                // 健康档案页面
-                path:'/',
-                element:<Record/>
-            } */
         ]
     },{
         path:'*',

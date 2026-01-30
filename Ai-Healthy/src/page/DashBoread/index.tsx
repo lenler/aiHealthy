@@ -1,6 +1,6 @@
 import { Card, Progress, Row, Col, Typography, Avatar, Skeleton, Spin} from 'antd'
 import dayjs from 'dayjs'
-import { getOverview, updateRecord, removeRecord} from '../../api/dashboard/index'
+import { getOverview, removeRecord} from '../../api/dashboard/index'
 import { useEffect, useState } from 'react'
 import RecordCard from '../../components/dashborad/recordCard'
 import './index.scss'
