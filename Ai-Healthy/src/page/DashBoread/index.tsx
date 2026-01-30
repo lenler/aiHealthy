@@ -1,11 +1,12 @@
 import { Card, Progress, Row, Col, Typography, Avatar, Skeleton, Spin} from 'antd'
 import dayjs from 'dayjs'
-import { getOverview, removeRecord} from '../../api/dashboard/index'
+import { getAiAdvice, getOverview, removeRecord} from '../../api/dashboard/index'
 import { useEffect, useState } from 'react'
 import RecordCard from '../../components/dashborad/recordCard'
 import './index.scss'
 const { Title, Text } = Typography;
 import RecordForm from '../../components/dashborad/recordForm'
+import useDietStore from '../../store/dietStore'
 
 export interface MacroInfo {
   current: number;
@@ -61,17 +62,12 @@ export default function DashBorad() {
   const [yesterdayRecord,setYesterdayRecord]=useState<DailyRecord>()
   const [isModalOpen, setIsModalOpen] = useState(false);//控制模态框
   const labels=['breakfast', 'lunch', 'dinner']//餐次类型
-  const Macros=['carbs', 'protein', 'fat']//营养成分类型
   const [type,setType]=useState<string>('breakfast')//当前操作的餐次类型
   const [name,setName]=useState<string>('')//当前操作的餐次名称
   const [calories,setCalories]=useState<number>(0)//当前操作的餐次热量
   const [isUpdate,setIsUpdate]=useState<boolean>(false)//是否是更新操作
+  const { aiAdvice: advice, targetCalories, lastFetchDate, setAiData, updateLastFetchDate } = useDietStore()
   // 定义索引的映射关系
-  const macroLabels: Record<string, string> = {
-    carbs: '碳水',
-    protein: '蛋白质',
-    fat: '脂肪'
-  };
   const mealLabels: Record<string, string> = {
     breakfast: '早餐',
     lunch: '午餐',
@@ -84,15 +80,25 @@ export default function DashBorad() {
    * 获取当前时间,格式化YYYY-MM-DD格式
    * 按照时间输出对应的问候语
    */
-  // 辅助函数 获取营养成分名
-  function getMacroName(summary: DashboardSummary | undefined, macro: string) {
-    if (!summary) return undefined;
-    if (macro === 'carbs') {
-      return summary.carbs
-    } else if (macro === 'protein') {
-      return summary.protein
-    } else {
-      return summary.fat
+  // 函数 获取ai建议
+  async function fetchAiAdvice() {
+    const today = getTime()
+    if (!userId) return
+    //检查当前时间是否和状态中建议创建时间相同
+    if(lastFetchDate !== today){
+      //发送请求
+      try{
+        // 获取ai的建议 将ai的回复存储在全局状态中
+        const res=await getAiAdvice(userId)
+        console.log(res);
+        if (res.data.status && res.data.data) {
+           const { advice, targetCalories } = res.data.data
+           setAiData(advice, targetCalories)
+           updateLastFetchDate(today)
+        }
+      }catch(error:any){
+        console.log(error);
+      }
     }
   }
   // 辅助函数 获取餐次名称
@@ -218,7 +224,8 @@ export default function DashBorad() {
   }
   useEffect(() => {
     getOverviewData()
-  }, [])
+    fetchAiAdvice()
+  }, [userId])
   return (
     <div id="page-home" className="page-container active">
       {loading?<Spin size="large"/>:<div>
@@ -236,51 +243,38 @@ export default function DashBorad() {
               </Col>
             </Row>
           </Card>
-
           {/* 汇总数据卡片 */}
           <Skeleton loading={loading}>
             <Row align="middle" gutter={[24, 24]}>
+              
               <Col xs={24} sm={10} md={8} className="ring-container">
                 <Progress
                   type="circle"
                   // 计算百分比 当前摄入量/总摄入量 * 100
-                  percent={summary?.calories.current?summary?.calories.current/summary?.calories.target*100:0}
+                  percent={summary?.calories.current ? summary?.calories.current/targetCalories*100:0}
                   size={120}
                   strokeColor="#10b981"
                   railColor="#e2e8f0"
                   format={() => (
                     <div className="ringText">
+                      <span>已摄入</span>
                       <strong>{summary?.calories.current}</strong>
-                      <span>可摄入</span>
                     </div>
                   )}
                 />
               </Col>
               {/* 宏元素统计卡片 */}
               <Col xs={24} sm={14} md={16}>
-                <div className="macro-stats">
-                  {
-                    Macros.map((item) => {
-                      const data = getMacroName(summary, item);
-                      return (
-                        <div key={item} className="macro-item">
-                          <div className="macro-header">
-                            <Text>{macroLabels[item]}</Text>
-                            <Text type="secondary">{data?.current || 0}/{data?.target || 0}{data?.unit || ''}</Text>
-                          </div>
-                          <Progress
-                            className="macroProgress"
-                            // 计算百分比 当前摄入量/总摄入量 * 100
-                            percent={data ? (data.current / data.target) * 100 : 0}
-                            showInfo={false}
-                            strokeColor={item === 'carbs' ? '#fbbf24' : item === 'protein' ? '#60a5fa' : '#10b981'}
-                            railColor="#e2e8f0"
-                            size="small"
-                          />
+                <h2 style={{fontWeight:'800',fontFamily:'ui-rounded',marginBottom:'6px'}}>AI建议:</h2>
+                <Text type="secondary" style={{fontFamily:'ui-rounded',marginBottom:'6px'}}>AI推荐今日可摄入热量:{targetCalories}</Text>
+                <div className="macro-stats" >
+                    {
+                      advice.map((item)=>{ return(
+                        <div className="advice-text" style={{fontWeight:'800'}}>
+                          <Text type="secondary">{item}</Text>
                         </div>
-                      )
-                    })
-                  }
+                      )})
+                    }
                 </div>
               </Col>
             </Row>

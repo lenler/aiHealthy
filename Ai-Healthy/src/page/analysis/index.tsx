@@ -11,6 +11,7 @@ import type { UploadProps } from 'antd';
 import type { Dayjs } from 'dayjs';
 import RecordCard from '../../components/analysis/recordCard';
 import { createRecord, getMealData, updateRecord, uploadImage} from '../../api/analysis';
+import useDietStore from '../../store/dietStore';
 type MealSource = 'AI 识别' | '手动录入';
 interface MealGroup {
   mealType: string;
@@ -74,7 +75,7 @@ export default function Analysis() {
   const [mealType, setMealType] = useState<string>("Dinner");
   const [draftData, setDraftData] = useState<AIDraftItem[]>([]);
   const [currentCalories, setCurrentCalories] = useState<number>(0);// 当前卡路里
-  const [targetCalories, setTargetCalories] = useState<number>(2000);// 目标卡路里
+  const targetCalories=useDietStore((state)=>state.targetCalories)
   const [caloriePercent, setCaloriePercent] = useState<number>(0);// 卡路里占比
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>();
   const rowSelection = {
