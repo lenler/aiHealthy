@@ -97,6 +97,7 @@ export default function Login() {
               prefix={<LockOutlined className="input-icon" />}
               placeholder="请输入密码"
               size="large"
+              autoComplete="current-password"
             />
           </Form.Item>
 
@@ -123,7 +124,7 @@ export default function Login() {
           </Form.Item>
 
           <div className="register-link">
-            还没有账号？<a href="#">立即注册</a>
+            还没有账号？<a href="/register">立即注册</a>
           </div>
         </Form>
       </Card>

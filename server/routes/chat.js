@@ -1,15 +1,15 @@
-import { streamText, convertToModelMessages } from 'ai';
+import { streamText, convertToModelMessages,tool } from 'ai';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import express from 'express';
 import dotenv from 'dotenv';
 import { Op } from 'sequelize';
 import { createRequire } from 'module';
+import { z } from 'zod';
 const require = createRequire(import.meta.url);
-const { ChatHistory } = require('../models/index.cjs');
+const { ChatHistory,MealItem} = require('../models/index.cjs');
 
 dotenv.config();
 const Router = express.Router();
-
 const deepseek = createDeepSeek({
   apiKey: process.env.AI_GATEWAY_API_KEY,
 });
@@ -33,6 +33,7 @@ Router.get('/',async(req,res)=>{
       },
     });
     const formattedHistories = chatHistories.map(h => ({
+      id:h.id,
       role: h.role,
       content: h.content,
       // 前端渲染数据库中的数据必须包含parts
@@ -51,6 +52,20 @@ Router.get('/',async(req,res)=>{
     })
   }
 })
+Router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedCount = await ChatHistory.destroy({
+      where: { id: id }
+    });
+    if (deletedCount === 0) {
+      return res.status(404).json({ status: false, message: '消息未找到' });
+    }
+    res.status(200).json({ status: true, message: '删除成功' });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
 
 Router.post('/', async (req, res) => {
   try {
@@ -107,6 +122,29 @@ Router.post('/', async (req, res) => {
     const result = streamText({
       model: deepseek('deepseek-chat'),
       messages: modelMessages,
+      system: '你是一位专业的营养减肥专家。请用简单易懂、通俗的语言回答用户关于营养和减肥的问题。回答要言简意赅，避免长篇大论，重点突出实用建议。如果用户询问今天的饮食状况、营养摄入或需要饮食建议，请务必先调用 mealInfoAnalysis 工具获取用户今日的饮食记录，然后根据记录进行分析。不要直接问用户吃了什么，除非工具返回的记录为空。',
+      tools: {
+        mealInfoAnalysis: tool({
+          description: '获取用户今日的饮食记录以分析营养摄入。当用户询问“我今天吃得怎么样”、“分析今日饮食”等相关问题时调用此工具。',
+          inputSchema: z.object({
+            mealInfo: z
+              .string()
+              .describe('The user\'s meal information'),
+          }),
+          execute: async () => {
+            const date = new Date().toISOString().split('T')[0];
+            const todayMeal = await MealItem.findAll({
+              where: {
+                userId: uid,
+                date: date
+              }
+            });
+            return {
+              todayMeal,
+            };
+          },
+        })
+      },
       // 2. 当 AI 回复完成后，保存 AI 的回复内容
       onFinish: async (event) => {
         try {
@@ -128,5 +166,6 @@ Router.post('/', async (req, res) => {
     res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
+
 
 export default Router;

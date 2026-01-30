@@ -21,6 +21,11 @@ const useAuthStore=create((set)=>({
         localStorage.removeItem('nickName')
         localStorage.removeItem('userId')
         set({token:'',isLogin:false,userNickName:'',userId:''})
+    },
+
+    updateUserInfo:(nickName:string)=>{
+        set({userNickName:nickName})
+        localStorage.setItem('nickName',nickName)
     }
 }))
 

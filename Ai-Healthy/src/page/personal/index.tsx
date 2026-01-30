@@ -1,52 +1,100 @@
+import { Card ,Avatar, Button} from "antd";
+import { useNavigate } from "react-router";
+import useAuthStore from "../../store/authStore";
+import { useState } from "react";
+import AccountForm from "../../components/personal/accountForm";
+import HealthyForm from "../../components/personal/healthyForm";
+
+const settingItem=[
+  {
+    key:'account',
+    icon:'⚙️',
+    title:'修改账号信息 ',
+  },
+  {
+    key:'healthInfo',
+    icon:'🧑‍⚕️',
+    title:'个人健康信息'
+  },
+  {
+    key:'logout',
+    icon:'🚪',
+    title:'退出登录'
+  }
+]
 export default function Personal() {
+  const nickName=useAuthStore((state:any)=>state.userNickName)
+  const logout=useAuthStore((state:any)=>state.logout)
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isHealthyModalOpen, setIsHealthyModalOpen] = useState(false);
+  const userId=localStorage.getItem('userId')
+  const navigator=useNavigate()
+
+  function setAccountModleDown(){
+    setIsAccountModalOpen(false)
+  }
+  function setHealthyModleDown(){
+    setIsHealthyModalOpen(false)
+  }
+
+  // 封装函数 打开模态框并且对于不同的key打开不同的表单
+  function openModalForm(key:string){
+    if(key==='account'){
+      // 打开账号管理表单
+      setIsAccountModalOpen(true)
+    }else if(key==='healthInfo'){
+      // 打开健康信息表单
+      setIsHealthyModalOpen(true)
+    }
+  }
+  function handleClick(key:string){
+    if(key==='logout'){
+      localStorage.removeItem('token')
+      localStorage.removeItem('nickName')
+      logout()
+      navigator('/login')
+    }else{
+      // 打开模态框
+      openModalForm(key)
+    }
+  }
   return (
     <div id="page-me" className="page-container active">
-        <div className="profile-card">
-            <div className="avatar-large"></div>
-            <h2>张三</h2>
-            <p className="profile-subtitle">减脂计划 · 第 12 天</p>
-            <div className="stat-row">
-                <div className="stat-item">
-                    <h3>72.5</h3><span>当前(kg)</span>
-                </div>
-                <div className="stat-item">
-                    <h3>65.0</h3><span>目标(kg)</span>
-                </div>
-                <div className="stat-item">
-                    <h3>12</h3><span>打卡(天)</span>
-                </div>
-            </div>
+      <Card className="profile-card">
+        <Avatar className="avatar-large"></Avatar>
+        <h2>{nickName}</h2>
+        <p className="profile-subtitle">希望你的每一天都如此健康</p>
+        <div className="stat-row">
+          <div className="stat-item">
+            <h3>72.5</h3><span>当前(kg)</span>
+          </div>
+          <div className="stat-item">
+            <h3>65.0</h3><span>目标(kg)</span>
+          </div>
+            <div className="stat-item">
+            <h3>12</h3><span>打卡(天)</span>
+          </div>
         </div>
-        <div className="section-title">我的计划</div>
-        <div className="settings-list">
-            <div className="setting-item">
-                <div className="setting-left">
-                    <div className="setting-icon">🎯</div> 当前目标
+        </Card>
+        <Card className="settings-list">
+          {
+            settingItem.map((item)=>{
+              return(
+                <div className="setting-item setting-btn">
+                  <Button style={{display:'block',width:'100%',height:'100%'}} onClick={()=>handleClick(item.key)}>
+                    <div className="setting-left">
+                      <div className="setting-icon">{item.icon}</div>
+                      <p>{item.title}</p>
+                    </div>
+                  </Button>
+                  
                 </div>
-                <div className="setting-right setting-primary">每周减 0.5kg</div>
-            </div>
-            <div className="setting-item">
-                <div className="setting-left">
-                    <div className="setting-icon">🍽️</div> 饮食模式
-                </div>
-                <div className="setting-right setting-sub">均衡饮食 (4:3:3)</div>
-            </div>
-        </div>
-        <div className="section-title section-title-space">系统设置</div>
-        <div className="settings-list">
-            <button type="button" className="setting-item setting-btn">
-                <div className="setting-left">
-                    <div className="setting-icon">🔔</div> 提醒设置
-                </div>
-                <div className="setting-chevron">{'>'}</div>
-            </button>
-            <button type="button" className="setting-item setting-btn">
-                <div className="setting-left">
-                    <div className="setting-icon">⚙️</div> 账号管理 
-                </div>
-                <div className="setting-chevron">{'>'}</div>
-            </button>
-        </div>
+              )
+            })
+          }
+      </Card>
+      <AccountForm isModle={isAccountModalOpen} setModleDown={setAccountModleDown} userId={userId!}/>
+      <HealthyForm isModle={isHealthyModalOpen} setModleDown={setHealthyModleDown} userId={userId!}/>
     </div>
   )
 }

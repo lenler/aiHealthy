@@ -14,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Record, { foreignKey: 'userId', as: 'records' });
       User.hasMany(models.MealItem, { foreignKey: 'userId', as: 'mealItems' });
       User.hasMany(models.ChatHistory, { foreignKey: 'userId', as: 'chatHistories' });
+      User.hasMany(models.HealthyInfo, { foreignKey: 'userId', as: 'healthyInfos' });
     }
   }
   User.init({
@@ -35,7 +36,6 @@ module.exports = (sequelize, DataTypes) => {
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
       unique: true,
       validate: {
         isEmail: true

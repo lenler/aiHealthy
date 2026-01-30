@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 用来编写基础的http请求 get post put delete
 const http= axios.create({
-    baseURL: "http://localhost:3002",
+    baseURL: "http://localhost:3080",
     timeout: 10000,
 })
 

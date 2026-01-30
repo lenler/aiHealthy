@@ -16,6 +16,9 @@ export default function RouterDefence({children}:{children:React.ReactNode}) {
     // 如果token为空 则跳转到登录页
     if(token===''||!token){
       navigator('/login')
+    }else{
+      // 如果token存在返回首页
+      navigator('/')
     }
   },[token,navigator])
   return (
