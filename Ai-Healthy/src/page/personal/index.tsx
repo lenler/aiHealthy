@@ -91,7 +91,7 @@ export default function Personal() {
                   <h3>{healthyInfo.weight}</h3><span>当前体重(kg)</span>
                 </div>
                 <div className="stat-item">
-                  <h3>{healthyInfo.height}</h3><span>当前身高(m)</span>
+                  <h3>{healthyInfo.height}</h3><span>当前身高(cm)</span>
                 </div>
                 <div className="stat-item">
                   <h3>{Number(healthyInfo.weight/(healthyInfo.height*healthyInfo.height/10000)).toFixed(1)}</h3><span>当前bim值</span>

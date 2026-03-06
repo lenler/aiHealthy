@@ -1,4 +1,4 @@
-import { Avatar,Card ,Flex,message} from 'antd'
+import { Avatar,Card ,Flex,message, Skeleton} from 'antd'
 import { Actions, Sender,Bubble} from '@ant-design/x';
 import React, {useEffect, useState} from 'react';
 import { AntDesignOutlined,DeleteOutlined} from '@ant-design/icons';
@@ -6,6 +6,7 @@ import { useChat} from '@ai-sdk/react';
 import { getChatHistory, deleteChatHistory } from '../../api/chat';
 import useAuthStore from '../../store/authStore';
 import type { GetRef } from 'antd';
+import { XMarkdown } from '@ant-design/x-markdown';
 
 const actionItems = (content: string, onConfirmDelete: () => void) => [
   {
@@ -34,6 +35,10 @@ export default function Chat() {
   const listRef = React.useRef<GetRef<typeof Bubble.List>>(null);
   const { messages, sendMessage, status, setMessages } = useChat({
     api: '/api/chat',
+    onStart: () => {
+      setLoading(true);
+      setIsStreaming(true); // 开始流式传输
+    },
     onFinish: () => {  
       setLoading(false);
       console.log('AI 回复已完成');
@@ -42,15 +47,24 @@ export default function Chat() {
          getChatHistory({userId}).then(res => {
             if (res.data.data) {
                 setMessages(res.data.data);
+                setIsStreaming(false); // 结束流式传输
             }
          });
       }
     },
     onError: (err) => {      
       setLoading(false);
+      setIsStreaming(false); // 结束流式传输
       message.error(`发生错误: ${err.message}`);
     }
   });
+  const [isStreaming, setIsStreaming] = useState(false);  // 是否正在流式传输中
+  const LoadingComponents = {
+  'loading-link': () => (
+    <Skeleton.Button active size="small" style={{ margin: '4px 0', width: 16, height: 16 }} />
+    ),
+    'loading-image': () => <Skeleton.Image active style={{ width: 60, height: 60 }} />,
+  };
 
   const handleDeleteMessage = async (msgId: string | number) => {
     try {
@@ -104,6 +118,22 @@ export default function Chat() {
                       placement={message.role === 'user' ? "end" : 'start'}
                       key={`${i}`}
                       content={part.text}
+                      contentRender={(content) => (
+                        <XMarkdown
+                          // className={className}
+                          content={content as string}
+                          paragraphTag="div"
+                          streaming={{
+                            hasNextChunk: isStreaming,
+                            enableAnimation: true, // 开启动画
+                            incompleteMarkdownComponentMap: {
+                              link: 'loading-link',
+                              image: 'loading-image',
+                            },
+                          }}
+                          components={LoadingComponents}
+                        />
+                      )}
                       typing={{ effect: 'fade-in' }}
                       header={message.role === 'user'?<h5>{nickname}</h5>:<h5>健康助手</h5>}
                       footer={(content,) => (

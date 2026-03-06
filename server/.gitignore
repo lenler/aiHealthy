@@ -13,6 +13,7 @@ dist-ssr
 *.local
 D:/web-frontend-protect/aiHealthy/server/node_modules
 /data/mysql
+/public/uploads
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

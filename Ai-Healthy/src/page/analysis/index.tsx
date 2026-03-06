@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {Card,DatePicker,Button,Tag,Space,Avatar,Upload,Select,Table,Progress,message,Statistic,Row,Col,Typography,} from 'antd';
-import {CameraOutlined,ReloadOutlined,ThunderboltOutlined,PieChartOutlined,InboxOutlined,} from '@ant-design/icons';
+import {CameraOutlined,PieChartOutlined,InboxOutlined,} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import './index.scss';
 const {Text } = Typography;

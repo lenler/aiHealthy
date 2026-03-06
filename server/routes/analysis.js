@@ -38,9 +38,6 @@ function normalizeMealType(type){
 /**
  * 配置 multer 存储 临时存储图片
  * 关于图片的 处理 暂时我们使用磁盘存储 但是后续会将图片上传到oss中 使用请求来的url来访问
- * @param {*} req 
- * @param {*} res 
- * @returns 
  */
 const uploadDir = path.join(__dirname, '../public', 'uploads');// 拼接上传文件保存目录：server/public/uploads
 // 递归创建目录（若不存在）
@@ -80,7 +77,6 @@ Router.post('/upload', upload.single('file'), async (req, res) => {
         const mimeType = req.file.mimetype || 'image/jpeg';
         // 转换为 base64 编码 可以提供给ai读取
         const imageDataUrl = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
-
         const response = await openai.chat.completions.create({
             model: "qwen-vl-max",
             messages: [
