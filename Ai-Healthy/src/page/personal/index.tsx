@@ -26,6 +26,11 @@ const settingItem=[
     title:'个人健康信息'
   },
   {
+    key: "avatar",
+    icon:"😊",
+    title:'切换头像'
+  },
+  {
     key:'logout',
     icon:'🚪',
     title:'退出登录'
@@ -63,7 +68,11 @@ export default function Personal() {
       localStorage.removeItem('nickName')
       logout()
       navigator('/login')
-    }else{
+    }
+    else if(key==="avatar"){
+      // 切换头像逻辑,前端弹出模态框 可以点击上传图片
+    }
+    else {
       // 打开模态框
       openModalForm(key)
     }
@@ -112,7 +121,6 @@ export default function Personal() {
                       <p>{item.title}</p>
                     </div>
                   </Button>
-                  
                 </div>
               )
             })
