@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState} from 'react';
 import {Card,DatePicker,Button,Tag,Space,Avatar,Upload,Select,Table,Progress,message,Statistic,Row,Col,Typography,} from 'antd';
 import {CameraOutlined,PieChartOutlined,InboxOutlined,} from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -11,7 +11,8 @@ import type { UploadProps } from 'antd';
 import type { Dayjs } from 'dayjs';
 import RecordCard from '../../components/analysis/recordCard';
 import { createRecord, getMealData, updateRecord, uploadImage} from '../../api/analysis';
-import useDietStore from '../../store/dietStore';
+import useInfoStore from '../../store/infoStore';
+
 type MealSource = 'AI 识别' | '手动录入';
 interface MealGroup {
   mealType: string;
@@ -73,9 +74,11 @@ export default function Analysis() {
   const [mealData,setMealdata]=useState<MealGroup[]>(mealGroups)
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs(new Date()));
   const [mealType, setMealType] = useState<string>("Dinner");
-  const [draftData, setDraftData] = useState<AIDraftItem[]>([]);
+  // const [draftData, setDraftData] = useState<AIDraftItem[]>([]);
+  const draftData=useInfoStore((state)=>state.draftData)
+  const {setDraft,deleteDraftData} =useInfoStore()
   const [currentCalories, setCurrentCalories] = useState<number>(0);// 当前卡路里
-  const targetCalories=useDietStore((state)=>state.targetCalories)
+  const targetCalories=useInfoStore((state)=>state.targetCalories)
   const [caloriePercent, setCaloriePercent] = useState<number>(0);// 卡路里占比
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>();
   const rowSelection = {
@@ -85,6 +88,10 @@ export default function Analysis() {
   };
   const [imgUrl,setImgUrl]=useState('')
   const isToday = currentDate.format('YYYY-MM-DD') === dayjs(new Date()).format('YYYY-MM-DD');//判断当前选中的日期是否是今日 如果不是 禁用更新数据
+  const [isRequire,setIsRequire]=useState<boolean>(false) //用于做ai识别的节流操作 再真正识别完成之前是无法重新上传的
+  /**
+   * 文件上传配置
+   */
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
@@ -92,6 +99,7 @@ export default function Analysis() {
     showUploadList: true,
     accept: 'image/*',
     async customRequest({ file, onSuccess, onError }) {
+      setIsRequire(true) //开始上传
       const formData = new FormData();
       formData.append('file', file as any);
       try {
@@ -106,7 +114,9 @@ export default function Analysis() {
             foodName: String(it?.foodName || '未知'),
             calories: Number.isFinite(it?.calories) ? Math.trunc(it.calories) : parseInt(String(it?.calories || 0), 10) || 0,
           }));
-          setDraftData(nextDraftData);
+          // 将整理好的草稿数据保存
+          setDraft(nextDraftData)
+          // 将数据存储到zustand
           setSelectedRowKeys(nextDraftData.map((d) => d.key));
           message.success('识别成功');
           onSuccess?.(res.data);
@@ -117,13 +127,13 @@ export default function Analysis() {
       } catch (err: any) {
         message.error('识别过程中发生错误');
         onError?.(err);
+      } finally{
+        setIsRequire(false)
       }
     }
   };
   /**
    * 格式化获取到的三餐数据
-   * @param data 
-   * @returns 
    */
   function formatMeals(data:any){
     const formatDate:MealGroup[]=data.map((item:any)=>{
@@ -199,6 +209,7 @@ export default function Analysis() {
     }finally{
       // 清空图片url
       setImgUrl('');
+      deleteDraftData()
       reLoadData(currentDate.format('YYYY-MM-DD'))
     }
   }
@@ -206,14 +217,31 @@ export default function Analysis() {
    * 清空当前草稿数据
    */
   function handleClearDraft(){
-    setDraftData([]);
+    // setDraftData([]);
+    deleteDraftData()
     setSelectedRowKeys([]);
     setImgUrl('');
   };
+
   useEffect(()=>{
     // 初始化时 刷新数据
     reLoadData(currentDate.format('YYYY-MM-DD'))
   },[])
+
+  // 添加页面关闭/刷新拦截
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRequire) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome 需要设置 returnValue
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRequire]);
 
   return (
     <div id="page-analysis" className="page-container active analysis-page">
@@ -294,7 +322,7 @@ export default function Analysis() {
                 </Space>
               }
             >
-              <Dragger {...uploadProps} style={{ marginBottom: 24, padding: 32, background: '#fafafa', border: '2px dashed #d9d9d9', borderRadius: 12 }}>
+              <Dragger {...uploadProps} style={{ marginBottom: 24, padding: 32, background: '#fafafa', border: '2px dashed #d9d9d9', borderRadius: 12 }} disabled={isRequire} >
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined style={{ color: '#13ec5b', fontSize: 48 }} />
                 </p>

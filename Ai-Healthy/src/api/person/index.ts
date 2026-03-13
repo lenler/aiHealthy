@@ -18,3 +18,11 @@ export function updateAccountInfo(userId:number|string,data:any){
 export function createHealthyInfo(userId:number|string,data:any){
     return post(`/api/person/healthyInfo/${userId}`,data)
 }
+
+export function getAvatarUploadSign(fileName: string){
+    return post(`/api/person/avatar`,{ fileName })
+}
+
+export function updateAvatar(userId:number|string,data:any){
+    return put(`/api/person/avatar/${userId}`,data)
+}

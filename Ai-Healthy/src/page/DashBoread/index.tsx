@@ -6,7 +6,7 @@ import RecordCard from '../../components/dashborad/recordCard'
 import './index.scss'
 const { Title, Text } = Typography;
 import RecordForm from '../../components/dashborad/recordForm'
-import useDietStore from '../../store/dietStore'
+import useInfoStore from '../../store/infoStore'
 
 export interface MacroInfo {
   current: number;
@@ -66,7 +66,7 @@ export default function DashBorad() {
   const [name,setName]=useState<string>('')//当前操作的餐次名称
   const [calories,setCalories]=useState<number>(0)//当前操作的餐次热量
   const [isUpdate,setIsUpdate]=useState<boolean>(false)//是否是更新操作
-  const { aiAdvice: advice, targetCalories, lastFetchDate, setAiData, updateLastFetchDate } = useDietStore()
+  const { aiAdvice: advice, targetCalories, lastFetchDate, setAiData, updateLastFetchDate } = useInfoStore()
   // 定义索引的映射关系
   const mealLabels: Record<string, string> = {
     breakfast: '早餐',

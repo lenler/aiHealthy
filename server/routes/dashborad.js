@@ -303,7 +303,7 @@ Router.get("/advice/:userId",async (req,res)=>{
                 },
                 {
                     role: "user",
-                    content: `用户的健康信息如下: ${JSON.stringify(healthyInfoPlain)}。请生成建议。`
+                    content: `用户的健康信息如下: ${JSON.stringify(healthyInfo)}。请生成建议。`
                 }
             ],
             model: "qwen-flash",

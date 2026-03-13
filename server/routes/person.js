@@ -1,17 +1,18 @@
 import express from 'express';
+import path from 'path';
+import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
+import { createOssClient, getOssBucket, getOssHost } from '../utils/oss.js';
 const require = createRequire(import.meta.url);
-const {HealthyInfo,User}=require("../models/index.cjs")
-const Router=express.Router();
+const { HealthyInfo, User } = require("../models/index.cjs");
+const Router = express.Router();
 /**
  * 用户健康信息
  */
-Router.get('/healthyInfo/:userId',async(req,res)=>{
-    // 获取用户健康信息
-    const userId=req.params.userId;
+Router.get('/healthyInfo/:userId', async (req, res) => {
+    const userId = req.params.userId;
     try{
         const healthyInfo=await HealthyInfo.findOne({
-            // 查询数据库中用户健康信息
             where:{
                 userId:userId
             }
@@ -37,7 +38,6 @@ Router.get('/healthyInfo/:userId',async(req,res)=>{
 })
 // 更新用户健康信息
 Router.put('/healthyInfo/:userId',async(req,res)=>{
-    // 更新用户健康信息
     const userId=req.params.userId;
     const {sex,age,height,weight,bodyStatus}=req.body;
         if(!userId){
@@ -48,13 +48,11 @@ Router.put('/healthyInfo/:userId',async(req,res)=>{
         }
     try{
         const healthyInfo=await HealthyInfo.findOne({
-            // 查询数据库中用户健康信息
             where:{
                 userId:userId
             }
         })
         if(healthyInfo){
-            // 更新用户健康信息
             await healthyInfo.update({
                 sex,
                 age,
@@ -80,11 +78,9 @@ Router.put('/healthyInfo/:userId',async(req,res)=>{
     }
 })
 Router.post('/healthyInfo/:userId',async(req,res)=>{
-    // 更新用户健康信息
     const userId=req.params.userId;
     const {sex,age,height,weight,bodyStatus}=req.body;
     try{
-        // 创建用户健康信息
         await HealthyInfo.create({
             userId:userId,
             sex,
@@ -108,7 +104,6 @@ Router.post('/healthyInfo/:userId',async(req,res)=>{
  * 用户账号信息
  */
 Router.get('/accountInfo/:userId',async(req,res)=>{
-    // 获取用户账号信息
     const id=req.params.userId;
     if(!id){
         return res.status(400).json({
@@ -118,18 +113,17 @@ Router.get('/accountInfo/:userId',async(req,res)=>{
     }
     try{
         const account=await User.findOne({
-            // 查询数据库中用户账号信息
             where:{
                 id:id
             }
         })
-        const {username,tel,email,nickName}=account;
         if(!account){
             return res.json({
                 code:404,
                 msg:'用户账号不存在'
             })
         }
+        const { username, tel, email, nickName, avatarUrl } = account;
         res.json({
             code:200,
             msg:'用户账号信息查询成功',
@@ -137,7 +131,8 @@ Router.get('/accountInfo/:userId',async(req,res)=>{
                 username,
                 tel,
                 email,
-                nickName
+                nickName,
+                avatarUrl: avatarUrl || ''
             }
         })
     }catch(err){
@@ -150,7 +145,6 @@ Router.get('/accountInfo/:userId',async(req,res)=>{
 })
 // 更新用户账号信息
 Router.put('/accountInfo/:userId',async(req,res)=>{
-    // 更新用户账号信息 需要对账号做信息验证
     const id=req.params.userId;
     const {username,tel,email,nickName}=req.body;
     if(!id){
@@ -161,13 +155,11 @@ Router.put('/accountInfo/:userId',async(req,res)=>{
     }
     try{
         const account=await User.findOne({
-            // 查询数据库中用户账号信息
             where:{
                 id:id
             }
         })
         if(account){
-            // 更新用户账号信息
             await account.update({
                 username,
                 tel,
@@ -193,4 +185,94 @@ Router.put('/accountInfo/:userId',async(req,res)=>{
         })
     }
 })
+Router.post("/avatar", async (req, res) => {
+    const client = createOssClient();
+    if (!client) {
+        return res.status(500).json({
+            code: 500,
+            msg: 'OSS 配置缺失'
+        });
+    }
+    try {
+        const fileName = String(req.body?.fileName || 'avatar.png');
+        const ext = path.extname(fileName) || '.png';
+        const key = `avatars/${randomUUID()}${ext}`;
+        const expireAt = new Date(Date.now() + 10 * 60 * 1000);
+        const policy = {
+            expiration: expireAt.toISOString(),
+            conditions: [
+                ['content-length-range', 0, 5 * 1024 * 1024],
+                { bucket: getOssBucket() },
+                ['eq', '$key', key]
+            ]
+        };
+        const formData = await client.calculatePostSignature(policy);
+        const host = getOssHost();
+        res.json({
+            code: 200,
+            msg: '获取OSS上传签名成功',
+            data: {
+                host,
+                key,
+                policy: formData.policy,
+                signature: formData.Signature,
+                accessid: formData.OSSAccessKeyId,
+                successActionStatus: '200',
+                expire: Math.floor(expireAt.getTime() / 1000),
+                url: `${host}/${key}`
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            code: 500,
+            msg: '获取OSS签名失败',
+            err: err.message
+        });
+    }
+});
+
+Router.put('/avatar/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    const { avatarUrl, avatarObjectKey } = req.body || {};
+    if (!userId) {
+        return res.status(400).json({
+            code: 400,
+            msg: '用户ID不能为空'
+        });
+    }
+    if (!avatarUrl || !avatarObjectKey) {
+        return res.status(400).json({
+            code: 400,
+            msg: '头像信息不完整'
+        });
+    }
+    try {
+        const account = await User.findOne({ where: { id: userId } });
+        if (!account) {
+            return res.status(404).json({
+                code: 404,
+                msg: '用户账号不存在'
+            });
+        }
+        await account.update({
+            avatarUrl,
+            avatarObjectKey,
+            avatarUpdatedAt: new Date()
+        });
+        return res.json({
+            code: 200,
+            msg: '头像更新成功',
+            data: {
+                avatarUrl,
+                avatarObjectKey
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({
+            code: 500,
+            msg: '头像更新失败',
+            err: err.message
+        });
+    }
+});
 export default Router;

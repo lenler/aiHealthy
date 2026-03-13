@@ -1,13 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';//用来加载环境变量的中间件
 import path from 'path';//处理路径的中间件
-import fs from 'fs';//处理文件读取的中间件
+import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
+import { createOssClient, getOssHost } from '../utils/oss.js';
 const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const multer = require('multer');//用来处理文件上传的中间件
 const { MealItem } = require('../models/index.cjs');
 dotenv.config();
@@ -35,26 +33,16 @@ function normalizeMealType(type){
     }
     return type
 }
-/**
- * 配置 multer 存储 临时存储图片
- * 关于图片的 处理 暂时我们使用磁盘存储 但是后续会将图片上传到oss中 使用请求来的url来访问
- */
-const uploadDir = path.join(__dirname, '../public', 'uploads');// 拼接上传文件保存目录：server/public/uploads
-// 递归创建目录（若不存在）
-fs.mkdirSync(uploadDir, { recursive: true });
-// 配置 multer 磁盘存储规则
-const storage = multer.diskStorage({
-    // 文件保存路径
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    // 生成唯一文件名：字段名-时间戳-随机数.原扩展名
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+            return cb(new Error('仅支持图片上传'));
+        }
+        cb(null, true);
     }
 });
-const upload = multer({ storage });
 // 初始化视觉模型
 const openai=new OpenAI({
     apiKey: process.env.AI_VISION_API_KEY,
@@ -69,14 +57,20 @@ Router.post('/upload', upload.single('file'), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ status: false, message: '未上传文件' });
         }
-        // 构建文件访问 URL
-        const fileUrl = `/uploads/${req.file.filename}`;
-        // 读取文件内容
-        const fileBuffer = await fs.promises.readFile(req.file.path);
-        // 确定 MIME 类型
+        const client = createOssClient();
+        if (!client) {
+            return res.status(500).json({ status: false, message: 'OSS配置缺失' });
+        }
+        const ext = path.extname(req.file.originalname || '') || '.jpg';
+        const objectKey = `meal-images/${randomUUID()}${ext}`;
+        await client.put(objectKey, req.file.buffer, {
+            headers: {
+                'Content-Type': req.file.mimetype || 'image/jpeg'
+            }
+        });
+        const fileUrl = `${getOssHost()}/${objectKey}`;
         const mimeType = req.file.mimetype || 'image/jpeg';
-        // 转换为 base64 编码 可以提供给ai读取
-        const imageDataUrl = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+        const imageDataUrl = `data:${mimeType};base64,${req.file.buffer.toString('base64')}`;
         const response = await openai.chat.completions.create({
             model: "qwen-vl-max",
             messages: [

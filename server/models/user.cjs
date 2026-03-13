@@ -49,6 +49,18 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     nickName: DataTypes.STRING,
+    avatarUrl: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    avatarObjectKey: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    avatarUpdatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     role: {
       type: DataTypes.INTEGER,
       defaultValue: 0, // 0 for user, 1 for admin, etc.
