@@ -60,12 +60,24 @@ export default function Chat() {
   });
   const [isStreaming, setIsStreaming] = useState(false);  // 是否正在流式传输中
   const LoadingComponents = {
-  'loading-link': () => (
-    <Skeleton.Button active size="small" style={{ margin: '4px 0', width: 16, height: 16 }} />
-    ),
-    'loading-image': () => <Skeleton.Image active style={{ width: 60, height: 60 }} />,
+    'loading-link': () => (
+      <Skeleton.Button active size="small" style={{ margin: '4px 0', width: 16, height: 16 }} />
+      ),
+      'loading-image': () => 
+      <Skeleton.Image active style={{ width: 60, height: 60 }} />,
   };
-
+  const sendMsg=() => {
+    if (!input.trim()) return;
+    if (!userId) {
+      message.error('缺少用户信息，请重新登录');
+      return;
+    }
+    if (status === 'streaming' || status === 'submitted') return;
+    setLoading(true);
+    sendMessage({ text: input }, { body: { userId } });
+    setInput('');
+    listRef.current?.scrollTo({ top: 'bottom', behavior: 'smooth' })
+  }
   const handleDeleteMessage = async (msgId: string | number) => {
     try {
         await deleteChatHistory(msgId);
@@ -99,6 +111,7 @@ export default function Chat() {
     fetchHistory();
     listRef.current?.scrollTo({ top: 'bottom', behavior: 'smooth' })
   }, [setMessages, userId]);
+
   return (
     <div id="page-chat" className="page-container active">
       <Card className="header-simple">
@@ -163,18 +176,7 @@ export default function Chat() {
           setLoading(false);
         }}
         placeholder='请输入你想问的问题'
-        onSubmit={() => {
-          if (!input.trim()) return;
-          if (!userId) {
-            message.error('缺少用户信息，请重新登录');
-            return;
-          }
-          if (status === 'streaming' || status === 'submitted') return;
-          setLoading(true);
-          sendMessage({ text: input }, { body: { userId } });
-          setInput('');
-          listRef.current?.scrollTo({ top: 'bottom', behavior: 'smooth' })
-        }}
+        onSubmit={sendMsg}
         autoSize={{ minRows: 1, maxRows: 6 }}
       >
       </Sender>

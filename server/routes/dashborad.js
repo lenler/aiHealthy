@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { createRequire } from 'module';
+import { applyPrivateCache } from '../utils/cache.js';
 const require = createRequire(import.meta.url);
 const { User, Record,MealItem,HealthyInfo } = require('../models/index.cjs');
 const {OpenAI} =require('openai')
@@ -34,7 +35,7 @@ function normalizeMealType(type){
     dinner: { name:string,calories:number}
  * } 
  */
-Router.get('/:userId',async(req,res)=>{
+Router.get('/:userId', applyPrivateCache(30), async(req,res)=>{
     try{
         const userId=req.params.userId
         const today = new Date().toISOString().split('T')[0]
@@ -261,7 +262,7 @@ const openai = new OpenAI(
     }
 );
 
-Router.get("/advice/:userId",async (req,res)=>{
+Router.get("/advice/:userId", applyPrivateCache(30), async (req,res)=>{
     const userId=req.params.userId
     if(!userId){
         return res.status(400).json({

@@ -3,13 +3,14 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import { createOssClient, getOssBucket, getOssHost } from '../utils/oss.js';
+import { applyPrivateCache } from '../utils/cache.js';
 const require = createRequire(import.meta.url);
 const { HealthyInfo, User } = require("../models/index.cjs");
 const Router = express.Router();
 /**
  * 用户健康信息
  */
-Router.get('/healthyInfo/:userId', async (req, res) => {
+Router.get('/healthyInfo/:userId', applyPrivateCache(60), async (req, res) => {
     const userId = req.params.userId;
     try{
         const healthyInfo=await HealthyInfo.findOne({
@@ -103,7 +104,7 @@ Router.post('/healthyInfo/:userId',async(req,res)=>{
 /**
  * 用户账号信息
  */
-Router.get('/accountInfo/:userId',async(req,res)=>{
+Router.get('/accountInfo/:userId', applyPrivateCache(60), async(req,res)=>{
     const id=req.params.userId;
     if(!id){
         return res.status(400).json({

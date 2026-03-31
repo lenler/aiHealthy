@@ -17,14 +17,13 @@ const generateRequestKey = (config: any) => {
 // 在请求拦截器中 拦截请求并添加请求头
 http.interceptors.request.use((config)=>{
     // 拦截重复请求 (只针对 POST 请求，保证第一次上传成功)
-    if (config.method === 'post') {
+    if (config.method === 'post' ) {
         const key = generateRequestKey(config);
         if (pendingRequests.has(key)) {
             return Promise.reject(new Error('请勿重复提交请求'));
         }
         pendingRequests.set(key, true);
     }
-
     //如果不做处理 就返回config 如果不返回 就会导致请求失败
     //为请求头添加token
     const token=localStorage.getItem('token')

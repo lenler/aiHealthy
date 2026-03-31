@@ -4,15 +4,17 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Op } from 'sequelize';
 import { createRequire } from 'module';
-import { z } from 'zod';
 const require = createRequire(import.meta.url);
 const { ChatHistory,MealItem} = require('../models/index.cjs');
 
 dotenv.config();
+
 const Router = express.Router();
+
 const deepseek = createDeepSeek({
   apiKey: process.env.AI_GATEWAY_API_KEY,
 });
+
 Router.get('/',async(req,res)=>{
   try{
     const userId = req.query.userId;
@@ -66,7 +68,6 @@ Router.delete('/:id', async (req, res) => {
     res.status(500).json({ status: false, message: error.message });
   }
 });
-
 Router.post('/', async (req, res) => {
   try {
     if (!process.env.AI_GATEWAY_API_KEY) {
@@ -129,7 +130,7 @@ Router.post('/', async (req, res) => {
           inputSchema: z.object({
             mealInfo: z
               .string()
-              .describe('The user\'s meal information'),
+              .describe('用户今日的饮食记录，格式为 JSON 字符串'),
           }),
           execute: async () => {
             const date = new Date().toISOString().split('T')[0];
