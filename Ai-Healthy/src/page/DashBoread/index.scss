@@ -1,6 +1,6 @@
 #page-home {
   padding: 40px 20px 20px;
-  backgroundColor: #fafefb;
+  backgroundcolor: #fafefb;
 
   .header-top {
     margin-bottom: 20px;
@@ -50,10 +50,13 @@
       );
       box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
       overflow: hidden;
-      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease;
 
       &::before {
-        content: '';
+        content: "";
         position: absolute;
         left: 10px;
         top: 10px;

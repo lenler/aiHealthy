@@ -3,6 +3,7 @@ import { createDeepSeek } from '@ai-sdk/deepseek';
 import express from 'express';
 import dotenv from 'dotenv';
 import { Op } from 'sequelize';
+import {z} from 'zod';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { ChatHistory,MealItem} = require('../models/index.cjs');

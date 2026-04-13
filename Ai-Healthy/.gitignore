@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 /aiDemo
 /node_modules
+/.env
 dist
 dist-ssr
 *.local
