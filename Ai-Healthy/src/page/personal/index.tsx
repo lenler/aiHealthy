@@ -95,10 +95,11 @@ export default function Personal() {
       formData.append('file', targetFile);
       const res = await uploadAvatar(formData);
       if (res.data.status) {
-        const avatarUrl = res.data.data.avatarUrl;
+        const result = res.data as { status: boolean; data: { avatarUrl: string } };
+        const avatarUrl = result.data.avatarUrl;
         await updateAvatar(userId, { avatarUrl });
         setAvatarUrl(avatarUrl);
-        useAuthStore.getState().updateAvatar(avatarUrl);
+        (useAuthStore.getState() as { updateAvatar: (url: string) => void }).updateAvatar(avatarUrl);
         message.success('头像上传成功');
         onSuccess?.(res.data, file as any);
       } else {
