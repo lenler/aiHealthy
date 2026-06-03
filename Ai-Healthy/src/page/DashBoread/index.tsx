@@ -97,8 +97,7 @@ export default function DashBorad() {
         updateLastFetchDate(today)
       }
     } catch (error: any) {
-      console.log(error);
-      message.error('获取AI建议失败')
+      console.log('获取AI建议失败', error);
     }
   }
   // 辅助函数 获取餐次名称

@@ -33,10 +33,10 @@ Router.get('/healthyInfo/:userId', applyPrivateCache(60), async (req, res) => {
                 data: healthyInfo
             });
         } else {
-            res.status(404).json({
-                status: false,
+            res.json({
+                status: true,
                 message: '用户健康信息不存在',
-                data: {}
+                data: null
             });
         }
     } catch (err) {

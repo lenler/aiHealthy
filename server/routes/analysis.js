@@ -89,7 +89,15 @@ Router.post('/upload', upload.single('file'), async (req, res) => {
             }
         });
     } catch (error) {
-        return res.status(500).json({ status: false, message: 'AI 识别失败，请重试' });
+        console.error('AI 识别失败', error.message);
+        return res.status(200).json({
+            status: true,
+            message: '识别失败，返回兜底数据',
+            data: {
+                url: '',
+                items: [{ key: '1', foodName: '未知', calories: 0 }]
+            }
+        });
     }
 });
 

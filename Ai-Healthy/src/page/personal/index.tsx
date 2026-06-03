@@ -120,7 +120,7 @@ export default function Personal() {
         const data = res.data.data
         setHealthyInfo(data)
       } catch {
-        message.error('获取健康信息失败')
+        // 健康信息加载失败，不影响正常使用
       }
     }
     async function getUserAccount() {
