@@ -18,7 +18,14 @@ const accessLogStream = fs.createWriteStream(path.join(logsDir, 'access.log'), {
 
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:55174', 'http://localhost:5173'],
+  origin: [
+    'http://localhost:55174',
+    'http://localhost:5173',
+    'http://zyff628.xyz',
+    'https://zyff628.xyz',
+    'http://162.251.92.183',
+    'https://162.251.92.183',
+  ],
   credentials: true,
 }));
 app.use(rateLimiter);
