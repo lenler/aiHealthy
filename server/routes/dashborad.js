@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import { createRequire } from "module";
-import { applyPrivateCache } from "../utils/cache.js";
+import { applyPrivateCache } from "../middleware/cache.js";
 const require = createRequire(import.meta.url);
 const { User, Record, MealItem, HealthyInfo } = require("../models/index.cjs");
 const { OpenAI } = require("openai");

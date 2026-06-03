@@ -3,7 +3,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import { createOssClient, getOssBucket, getOssHost } from '../utils/oss.js';
-import { applyPrivateCache } from '../utils/cache.js';
+import { applyPrivateCache } from '../middleware/cache.js';
 const require = createRequire(import.meta.url);
 const { HealthyInfo, User } = require("../models/index.cjs");
 const Router = express.Router();
