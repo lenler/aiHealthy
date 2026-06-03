@@ -1,31 +1,21 @@
-import { streamText, convertToModelMessages,tool } from 'ai';
-import { createDeepSeek } from '@ai-sdk/deepseek';
+import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 import express from 'express';
-import dotenv from 'dotenv';
 import { Op } from 'sequelize';
-import {z} from 'zod';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { ChatHistory,MealItem} = require('../models/index.cjs');
 
-dotenv.config();
-
 const Router = express.Router();
 
-const deepseek = createDeepSeek({
-  apiKey: process.env.AI_GATEWAY_API_KEY,
+const qwen = createOpenAI({
+  apiKey: process.env.AI_VISION_API_KEY,
+  baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
 });
 
 Router.get('/',async(req,res)=>{
   try{
-    const userId = req.query.userId;
-    if (!userId) {
-      return res.status(400).json({ error: '缺少 userId 参数' });
-    }
-    const uid = parseInt(userId, 10);
-    if (isNaN(uid)) {
-      return res.status(400).json({ error: 'userId 必须是数字' });
-    }
+    const uid = req.userId;
 
     const chatHistories = await ChatHistory.findAll({
     where: {
@@ -34,6 +24,8 @@ Router.get('/',async(req,res)=>{
           [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
         },
       },
+      order: [["createdAt", "ASC"]],
+      limit: 100,
     });
     const formattedHistories = chatHistories.map(h => ({
       id:h.id,
@@ -49,41 +41,31 @@ Router.get('/',async(req,res)=>{
         data: formattedHistories // 直接返回数组
     })
   }catch(error){
-    res.status(400).json({
-        status:false,
-        message:error.message
-    })
+    res.status(500).json({ status: false, message: '获取聊天记录失败' });
   }
 })
 Router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const deletedCount = await ChatHistory.destroy({
-      where: { id: id }
+      where: { id, userId: req.userId }
     });
     if (deletedCount === 0) {
       return res.status(404).json({ status: false, message: '消息未找到' });
     }
     res.status(200).json({ status: true, message: '删除成功' });
   } catch (error) {
-    res.status(500).json({ status: false, message: error.message });
+    res.status(500).json({ status: false, message: '删除失败，请稍后重试' });
   }
 });
 Router.post('/', async (req, res) => {
   try {
-    if (!process.env.AI_GATEWAY_API_KEY) {
-      return res.status(500).json({ error: '缺少环境变量 AI_GATEWAY_API_KEY' });
+    if (!process.env.AI_VISION_API_KEY) {
+      return res.status(500).json({ error: '缺少环境变量 AI_VISION_API_KEY' });
     }
-    const { messages, userId } = req.body;
-    // console.log(messages);
-    
-    if (!userId) {
-      return res.status(400).json({ error: '缺少 userId 参数' });
-    }
-    const uid = parseInt(userId, 10);
-    if (isNaN(uid)) {
-      return res.status(400).json({ error: 'userId 必须是数字' });
-    }
+    const { messages } = req.body;
+    const uid = req.userId;
+
     if (!Array.isArray(messages)) {
       return res.status(400).json({ error: 'messages 必须是一个数组' });
     }
@@ -113,50 +95,42 @@ Router.post('/', async (req, res) => {
     const lastMessage=modelMessages[modelMessages.length-1]
     if(lastMessage){
       await ChatHistory.create({
-        sessionId: 'session-001',
+        sessionId: `session-${uid}`,
         userId: uid,
         role: lastMessage.role,
         content: lastMessage.content,
       })
-    }else{
-      console.log('最后一条信息为空')
     }
+    // 预处理：查询今日饮食数据，注入为 system 上下文
+    const date = new Date().toISOString().split('T')[0];
+    const todayMeal = await MealItem.findAll({
+      where: { userId: uid, date }
+    });
+    let mealContext;
+    if (todayMeal.length === 0) {
+      mealContext = '用户今日暂无饮食记录。';
+    } else {
+      const mealList = todayMeal.map(m =>
+        `${m.mealType}: ${m.foodName}, ${m.calories}kcal`
+      ).join('；');
+      const totalCalories = todayMeal.reduce((sum, m) => sum + m.calories, 0);
+      mealContext = `用户今日饮食记录：${mealList}。今日总摄入: ${totalCalories}kcal。`;
+    }
+
     const result = streamText({
-      model: deepseek('deepseek-chat'),
+      model: qwen('qwen-plus'),
       messages: modelMessages,
-      system: '你是一位专业的营养减肥专家。请用简单易懂、通俗的语言回答用户关于营养和减肥的问题。回答要言简意赅，避免长篇大论，重点突出实用建议。如果用户询问今天的饮食状况、营养摄入或需要饮食建议，请务必先调用 mealInfoAnalysis 工具获取用户今日的饮食记录，然后根据记录进行分析。不要直接问用户吃了什么，除非工具返回的记录为空。',
-      tools: {
-        mealInfoAnalysis: tool({
-          description: '获取用户今日的饮食记录以分析营养摄入。当用户询问“我今天吃得怎么样”、“分析今日饮食”等相关问题时调用此工具。',
-          inputSchema: z.object({
-            mealInfo: z
-              .string()
-              .describe('用户今日的饮食记录，格式为 JSON 字符串'),
-          }),
-          execute: async () => {
-            const date = new Date().toISOString().split('T')[0];
-            const todayMeal = await MealItem.findAll({
-              where: {
-                userId: uid,
-                date: date
-              }
-            });
-            return {
-              todayMeal,
-            };
-          },
-        })
-      },
+      system: `你是一位专业的营养减肥专家，请用简单易懂的语言回答用户问题。${mealContext} 当用户询问饮食状况时，直接基于上述记录分析回答，不要说"让我查一下"之类的话。`,
       // 2. 当 AI 回复完成后，保存 AI 的回复内容
       onFinish: async (event) => {
         try {
           await ChatHistory.create({
-            sessionId: 'session-default',
+            sessionId: `session-${uid}`,
             userId: uid,
             role: 'assistant',
             content: event.text // event.text 是 AI 回复的完整字符串
           });
-          console.log('AI 回复已保存到数据库');
+          // AI reply saved
         } catch (dbError) {
           console.error('保存 AI 回复失败:', dbError);
         }

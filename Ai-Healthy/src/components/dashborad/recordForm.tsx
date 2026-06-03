@@ -1,4 +1,4 @@
-import {Modal,  Form, Input ,Row,Col,Radio} from 'antd'
+import {Modal,  Form, Input ,Row,Col,Radio, message} from 'antd'
 import { updateRecord,createRecord } from '../../api/dashboard/index'
 import { useEffect } from 'react'
 
@@ -89,6 +89,7 @@ export default function RecordForm({showCancel,isModalOpen,
       refresh()
     }catch(error){
       console.log(error)
+      message.error('更新失败')
     }
   }
   // 新增指定记录
@@ -99,6 +100,7 @@ export default function RecordForm({showCancel,isModalOpen,
       refresh()
     }catch(error){
       console.log(error)
+      message.error('添加失败')
     }
   }
 

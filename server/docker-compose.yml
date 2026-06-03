@@ -1,14 +1,21 @@
 services:
   mysql:
     image: mysql:8.3.0
+    restart: unless-stopped
     command:
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_general_ci
     environment:
-      - MYSQL_ROOT_PASSWORD=admin123
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-admin123}
+      - MYSQL_DATABASE=${DB_NAME:-database_development}
       - MYSQL_LOWER_CASE_TABLE_NAMES=0
     ports:
       - "3306:3306"
     volumes:
       - ./data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

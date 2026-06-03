@@ -2,7 +2,7 @@ import axios from "axios";
 
 // 用来编写基础的http请求 get post put delete
 const http = axios.create({
-  baseURL: "http://localhost:3080",
+  baseURL: "",
   timeout: 10000,
 });
 
@@ -35,7 +35,7 @@ http.interceptors.request.use(
     //并不是所有页面都需要token
     if (token) {
       //http协议中的标准字段 专门用来携带认证信息
-      config.headers["Authorization"] = `${token}`;
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
   },

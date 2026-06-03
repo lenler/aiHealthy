@@ -1,29 +1,37 @@
-import { Form, Input, Button, Card } from "antd";
+import { Form, Input, Button, Card, message } from "antd";
 import { UserOutlined, LockOutlined, HeartOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./index.scss";
-import { registerApi } from "../../api/sgin_up";
+import { registerApi } from "../../api/sign_up";
 const styleFont = { fontFamily: '"Comic Sans MS", cursive' };
 
 export default function Register() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const handleRegister = () => {
     form
       .validateFields()
       .then((values) => {
-        console.log("Register values:", values);
-        // TODO: Implement registration logic
+        setLoading(true);
         registerApi(values).then((res) => {
-          if (res.data.code === 200) {
+          setLoading(false);
+          const isSuccess = res.data.code === 200 || res.data.status;
+          if (isSuccess) {
+            message.success('注册成功');
             navigate("/login");
           } else {
-            console.error("Registration failed:", res.message);
+            message.error(res.data.message || '注册失败');
           }
+        }).catch((err) => {
+          setLoading(false);
+          message.error(err?.message || '网络错误，请稍后重试');
         });
       })
       .catch((err) => {
-        console.error("Validation failed:", err);
+        message.error(err?.message || '请检查表单填写');
       });
   };
 
@@ -167,6 +175,7 @@ export default function Register() {
               className="login-button"
               block
               size="large"
+              loading={loading}
               onClick={handleRegister}
             >
               立即注册

@@ -2,7 +2,11 @@ import {Card,Button,Tag,Space,message,Typography,} from 'antd';
 import {EditOutlined,DeleteOutlined,FireOutlined,PlusOutlined} from '@ant-design/icons';
 const { Text } = Typography;
 
-export default function RecordCard({group}:{group:any}) {
+export default function RecordCard({group, onEdit, onDelete}:{
+  group: any;
+  onEdit?: (group: any) => void;
+  onDelete?: (group: any) => void;
+}) {
   return (
     <Card key={group.mealType} className="meal-section">
     <div className="meal-section-header">
@@ -33,8 +37,10 @@ export default function RecordCard({group}:{group:any}) {
                 src={group.imgUrl || null}
                 />
                 <div className="food-actions">
-                <Button size="small" shape="circle" icon={<EditOutlined />} />
-                <Button size="small" shape="circle" danger icon={<DeleteOutlined />} />
+                <Button size="small" shape="circle" icon={<EditOutlined />}
+                  onClick={(e) => { e.stopPropagation(); onEdit?.(group); }} />
+                <Button size="small" shape="circle" danger icon={<DeleteOutlined />}
+                  onClick={(e) => { e.stopPropagation(); onDelete?.(group); }} />
                 </div>
             </div>
             }

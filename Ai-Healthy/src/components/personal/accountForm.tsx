@@ -22,7 +22,6 @@ export default function AccountForm({isModle,setModleDown,userId}:propsType) {
     } finally {
       setLoading(false)
     }
-    setModleDown()
   };
   // 点击取消关闭模态框
   const handleCancel = () => {

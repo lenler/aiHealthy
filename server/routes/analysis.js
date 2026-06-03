@@ -1,40 +1,30 @@
 import express from 'express';
-import dotenv from 'dotenv';//用来加载环境变量的中间件
-import path from 'path';//处理路径的中间件
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { createRequire } from 'module';
 import OpenAI from 'openai';
-import { createOssClient, getOssHost } from '../utils/oss.js';
+import { normalizeMealType } from '../utils/meal.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const require = createRequire(import.meta.url);
-const multer = require('multer');//用来处理文件上传的中间件
+const multer = require('multer');
 const { MealItem } = require('../models/index.cjs');
-dotenv.config();
-/**
- * 所有辅助函数 格式转换 避免前端传入小写字母导致请求不能通过数据库模型验证
- * @param {*} type 
- * @returns 
- */
-function normalizeMealType(type){
-    if(!type){
-        return type
-    }
-    const t=type.toLowerCase()
-    if(t==='breakfast'){
-        return 'Breakfast'
-    }
-    if(t==='lunch'){
-        return 'Lunch'
-    }
-    if(t==='dinner'){
-        return 'Dinner'
-    }
-    if(t==='snack'){
-        return 'Snack'
-    }
-    return type
-}
+
+const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'meal-images');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: UPLOAD_DIR,
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname || '') || '.jpg';
+            cb(null, `${randomUUID()}${ext}`);
+        }
+    }),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (!file.mimetype || !file.mimetype.startsWith('image/')) {
@@ -43,34 +33,24 @@ const upload = multer({
         cb(null, true);
     }
 });
-// 初始化视觉模型
-const openai=new OpenAI({
+
+const openai = new OpenAI({
     apiKey: process.env.AI_VISION_API_KEY,
     baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-})
-/**
- * 各个路由配置
- */
+});
+
 const Router = express.Router();
+
 Router.post('/upload', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ status: false, message: '未上传文件' });
         }
-        const client = createOssClient();
-        if (!client) {
-            return res.status(500).json({ status: false, message: 'OSS配置缺失' });
-        }
-        const ext = path.extname(req.file.originalname || '') || '.jpg';
-        const objectKey = `meal-images/${randomUUID()}${ext}`;
-        await client.put(objectKey, req.file.buffer, {
-            headers: {
-                'Content-Type': req.file.mimetype || 'image/jpeg'
-            }
-        });
-        const fileUrl = `${getOssHost()}/${objectKey}`;
+        const fileUrl = `/uploads/meal-images/${req.file.filename}`;
         const mimeType = req.file.mimetype || 'image/jpeg';
-        const imageDataUrl = `data:${mimeType};base64,${req.file.buffer.toString('base64')}`;
+        const buffer = fs.readFileSync(req.file.path);
+        const imageDataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+
         const response = await openai.chat.completions.create({
             model: "qwen-vl-max",
             messages: [
@@ -88,172 +68,105 @@ Router.post('/upload', upload.single('file'), async (req, res) => {
             ],
             response_format: { type: 'json_object' }
         });
-        // 解析ai返回的json数据
+
         const content = response?.choices?.[0]?.message?.content;
         const json = typeof content === 'string' ? JSON.parse(content) : content;
-        // 从json中提取items数组 并处理空数组情况
         const rawItems = Array.isArray(json?.items) ? json.items : [];
-        // 对items数组进行映射处理 处理空值情况
         const items = rawItems.map((item, idx) => {
             const key = String(idx + 1);
-            const foodName = item?.foodName
-            const calories = Number(item?.calories)
+            const foodName = item?.foodName;
+            const calories = Number(item?.calories);
             return { key, foodName, calories };
         });
-        // 处理空数组情况 确保items至少包含一个元素
-        const safeItems = items.length ? items : [{ key: '1', foodName: '未知', calories: 0,img:'' }];
+        const safeItems = items.length ? items : [{ key: '1', foodName: '未知', calories: 0, img: '' }];
+
         return res.status(200).json({
-            status:true,
-            message:'识别成功',
-            data:{
-                // 上传的图片url
+            status: true,
+            message: '识别成功',
+            data: {
                 url: fileUrl,
                 items: safeItems
             }
-        })
+        });
     } catch (error) {
-        return res.status(500).json({ status: false, message: error.message });
+        return res.status(500).json({ status: false, message: 'AI 识别失败，请重试' });
     }
 });
-Router.post('/dashborad/:userId',async(req,res)=>{
-    try{
-        const userId=req.params.userId
-        const date=req.body.currentDate || new Date().toISOString().split('T')[0]
-        const todayMeal=await MealItem.findAll({
-            where:{
-                userId:userId,
-                date: date
-            }
-        })
-        const data=todayMeal
+
+Router.post('/dashboard/:userId', async (req, res) => {
+    try {
+        const userId = req.userId;
+        const date = req.body.currentDate || new Date().toISOString().split('T')[0];
+        const todayMeal = await MealItem.findAll({
+            where: { userId, date }
+        });
         return res.status(200).json({
-            status:true,
-            message:'查询成功',
-            data
-        })
-    }catch(error){
-        console.log('查询记录失败',error.message)
-        res.status(400).json({
-            status:false,
-            message:error.message
-        })
+            status: true,
+            message: '查询成功',
+            data: todayMeal
+        });
+    } catch (error) {
+        console.error('查询记录失败', error.message);
+        res.status(500).json({ status: false, message: '查询失败' });
     }
-})
-Router.put('/:userId',async(req,res)=>{
-    try{
-        const userId=req.params.userId
-        const {foodName,calories,mealType,imgUrl}=req.body
-        if(!userId){
-            return res.status(400).json({
-                status:false,
-                message:'用户ID不能为空'
-            })
-        }
-        if(!foodName){
-            return res.status(400).json({
-                status:false,
-                message:'食物名称不能为空'
-            })
-        }
-        if(!calories){
-            return res.status(400).json({
-                status:false,
-                message:'卡路里不能为空'
-            })
-        }
-        if(!mealType){
-            return res.status(400).json({
-                status:false,
-                message:' mealType不能为空'
-            })
-        }
-        const normalizedMealType=normalizeMealType(mealType)
-        const condition={
+});
+
+Router.put('/:userId', async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { foodName, calories, mealType, imgUrl } = req.body;
+        if (!foodName) return res.status(400).json({ status: false, message: '食物名称不能为空' });
+        if (!calories) return res.status(400).json({ status: false, message: '卡路里不能为空' });
+        if (!mealType) return res.status(400).json({ status: false, message: 'mealType不能为空' });
+
+        const normalizedMealType = normalizeMealType(mealType);
+        const condition = {
             userId,
             date: new Date().toISOString().split('T')[0],
-            mealType:normalizedMealType
-        }
-        await MealItem.update({
-            foodName,
-            calories,
-            mealType:normalizedMealType,
-            imgUrl
-        },{
-            where:condition
-        })
-        return res.status(200).json({
-            status:true,
-            message:'更新成功'
-        })
-    }catch(error){
-        console.log('更新失败',error.message)
-        res.status(400).json({
-            status:false,
-            message:error.message
-        })
+            mealType: normalizedMealType
+        };
+        await MealItem.update(
+            { foodName, calories, mealType: normalizedMealType, imgUrl },
+            { where: condition }
+        );
+        return res.status(200).json({ status: true, message: '更新成功' });
+    } catch (error) {
+        console.error('更新失败', error.message);
+        res.status(500).json({ status: false, message: '更新失败' });
     }
-})
-Router.post("/:userId",async(req,res)=>{
-        try{
-        const userId=req.params.userId
-        const {foodName,calories,mealType,imgUrl}=req.body
-        if(!userId){
-            return res.status(400).json({
-                status:false,
-                message:'用户ID不能为空'
-            })
-        }
-        if(!foodName){
-            return res.status(400).json({
-                status:false,
-                message:'食物名称不能为空'
-            })
-        }
-        if(!calories){
-            return res.status(400).json({
-                status:false,
-                message:'卡路里不能为空'
-            })
-        }
-        if(!mealType){
-            return res.status(400).json({
-                status:false,
-                message:' mealType不能为空'
-            })
-        }
-        const normalizedMealType=normalizeMealType(mealType)
-        const condition={
+});
+
+Router.post("/:userId", async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { foodName, calories, mealType, imgUrl } = req.body;
+        if (!foodName) return res.status(400).json({ status: false, message: '食物名称不能为空' });
+        if (!calories) return res.status(400).json({ status: false, message: '卡路里不能为空' });
+        if (!mealType) return res.status(400).json({ status: false, message: 'mealType不能为空' });
+
+        const normalizedMealType = normalizeMealType(mealType);
+        const condition = {
             userId,
             date: new Date().toISOString().split('T')[0],
-            mealType:normalizedMealType
-        }
-        const existingItem=await MealItem.findOne({
-            where:condition
-        })
-        if(existingItem){
-            return res.status(400).json({
-                status:false,
-                message:'该餐次已存在'
-            })
+            mealType: normalizedMealType
+        };
+        const existingItem = await MealItem.findOne({ where: condition });
+        if (existingItem) {
+            return res.status(400).json({ status: false, message: '该餐次已存在' });
         }
         await MealItem.create({
             foodName,
             calories,
-            mealType:normalizedMealType,
-            userId:userId,
-            date:new Date().toISOString().split('T')[0],
+            mealType: normalizedMealType,
+            userId,
+            date: new Date().toISOString().split('T')[0],
             imgUrl
-        })
-        return res.status(200).json({
-            status:true,
-            message:'添加成功'
-        })
-    }catch(error){
-        console.log('添加失败',error.message)
-        res.status(400).json({
-            status:false,
-            message:error.message
-        })
+        });
+        return res.status(200).json({ status: true, message: '添加成功' });
+    } catch (error) {
+        console.error('添加失败', error.message);
+        res.status(500).json({ status: false, message: '添加失败' });
     }
-})
-export default Router
+});
+
+export default Router;

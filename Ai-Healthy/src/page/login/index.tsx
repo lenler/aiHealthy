@@ -15,15 +15,16 @@ interface loginParams{
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [form]=Form.useForm()
+  const token=useAuthStore((state:any) => state.token);
   const login=useAuthStore((state:any) => state.login);//从zustand中获取login函数
   const navigator=useNavigate()
 
   useEffect(()=>{
     //如果用户已经登录 则跳转到首页
-    if(localStorage.getItem('token')){
+    if(token){
       navigator('/')
     }
-  },[navigator])
+  },[token,navigator])
 
   /**
    * 登录函数
@@ -32,6 +33,7 @@ export default function Login() {
    * 3. 登录成功后将token和昵称存到redux和sessionStorage中
   */
   function handleLogin(){
+    setLoading(true)
     form.validateFields().then( async (value:loginParams)=>{
       const res=await loginApi({
         username:value.username,
@@ -39,18 +41,16 @@ export default function Login() {
       })
       console.log(res);
       console.log(res.data.data);
-      const { token, nickName, userId, nickname, id } = res.data.data
+      const { token, nickName, userId, avatarUrl, nickname, id } = res.data.data
       const resolvedNickName = nickName || nickname || ''
       const resolvedUserId = userId || id || ''
-      login(token,resolvedNickName,String(resolvedUserId))
-      sessionStorage.setItem('nickname',resolvedNickName)
-      sessionStorage.setItem('userId',String(resolvedUserId))
+      const resolvedAvatar = avatarUrl || ''
+      login(token, resolvedNickName, String(resolvedUserId), resolvedAvatar)
       setLoading(false)
       message.success('登录成功')
-      navigator('/')
     }).catch((err)=>{
       setLoading(false)
-      message.error(err.message)
+      message.error(err?.message || err?.response?.data?.msg || err?.response?.data?.message || '登录失败，请重试')
     }) 
   }
 
@@ -75,7 +75,6 @@ export default function Login() {
           form={form}
           name="login"
           initialValues={{ remember: true }}
-          autoComplete="off"
           className="login-form"
         >
           <Form.Item
@@ -103,7 +102,7 @@ export default function Login() {
 
           <Form.Item>
             <div className="form-actions">
-              <a className="forgot-password" href="#">
+              <a className="forgot-password" onClick={() => message.info('请联系管理员重置密码')}>
                 忘记密码？
               </a>
             </div>

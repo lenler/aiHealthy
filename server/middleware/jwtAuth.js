@@ -1,10 +1,4 @@
-import dotenv from "dotenv";
-import { createRequire } from "module";
-
-dotenv.config();
-
-const require = createRequire(import.meta.url);
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
 function getTokenFromRequest(req) {
   const raw = req.headers?.authorization;
@@ -17,7 +11,7 @@ function getTokenFromRequest(req) {
 }
 
 function pickUserIdFromRequest(req) {
-  const candidates = [req.params?.userId, req.query?.userId, req.body?.userId];
+  const candidates = [req.params?.userId, req.query?.userId];
   for (const v of candidates) {
     if (v === undefined || v === null) continue;
     const s = String(v).trim();

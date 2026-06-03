@@ -1,7 +1,4 @@
 import OSS from 'ali-oss';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 function getConfig() {
   const region = process.env.ALIYUN_REGION;

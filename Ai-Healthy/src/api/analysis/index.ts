@@ -2,7 +2,7 @@ import{post,put}from'../../utils/http/require'
 import http from '../../utils/http/http'
 // 为了规范这里我们就不直接调用首页的路由了 不过大差不差 只是名字不一样
 export function getMealData(userId:string,currentDate:string){
-    return post(`/api/analysis/dashborad/${userId}`,{currentDate})
+    return post(`/api/analysis/dashboard/${userId}`,{currentDate})
 }
 
 export function createRecord(userId:string,data:any){

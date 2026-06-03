@@ -1,7 +1,7 @@
 import { Avatar, Card, Flex, message, Skeleton } from "antd";
 import { Actions, Sender, Bubble } from "@ant-design/x";
 import React, { useEffect, useState } from "react";
-import { AntDesignOutlined, DeleteOutlined } from "@ant-design/icons";
+import { RobotOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { getChatHistory, deleteChatHistory } from "../../api/chat";
@@ -28,14 +28,12 @@ const actionItems = (content: string, onConfirmDelete: () => void) => [
 ];
 
 export default function Chat() {
-  const nickname = localStorage.getItem("nickName");
+  const nickname = useAuthStore((state: any) => state.userNickName);
+  const avatarUrl = useAuthStore((state: any) => state.avatarUrl);
   const [loading, setLoading] = useState<boolean>(false);
   const [input, setInput] = React.useState("");
-  const token =
-    useAuthStore((state: any) => state.token) || localStorage.getItem("token");
-  const userId =
-    useAuthStore((state: any) => state.userId) ||
-    sessionStorage.getItem("userId");
+  const token = useAuthStore((state: any) => state.token);
+  const userId = useAuthStore((state: any) => state.userId);
   // 聊天区滚动容器（.chat-area）
   const scrollRef = React.useRef<HTMLDivElement>(null); //绑定聊天区域
   // 记录用户是否“贴近底部”（贴底时：新消息自动滚到底；看历史时：不强制打断）
@@ -59,7 +57,7 @@ export default function Chat() {
       api: "/api/chat",
       headers: token
         ? {
-            Authorization: token,
+            Authorization: `Bearer ${token}`,
           }
         : undefined,
     }),
@@ -71,9 +69,10 @@ export default function Chat() {
         getChatHistory({ userId }).then((res) => {
           if (res.data.data) {
             setMessages(res.data.data);
-            setIsStreaming(false); // 结束流式传输
           }
-        });
+        }).finally(() => setIsStreaming(false));
+      } else {
+        setIsStreaming(false);
       }
     },
     onError: (err) => {
@@ -236,6 +235,12 @@ export default function Chat() {
       </Card>
       {/* 对话区域 */}
       <div className="chat-area" ref={scrollRef} onScroll={handleScroll}>
+        {!loading && messages.length === 0 ? (
+          <Flex vertical align="center" justify="center" style={{ height: 360 }}>
+            <h3 style={{ color: '#999', marginBottom: 8 }}>试着问问 AI 你今天该怎么吃吧~</h3>
+            <p style={{ color: '#bbb' }}>例如："我今天早餐吃了什么"、"帮我分析今日营养"</p>
+          </Flex>
+        ) : (
         <Flex vertical style={{ height: 720 }} gap="small">
           {visibleMessages.map((message) => {
             return (
@@ -282,7 +287,17 @@ export default function Chat() {
                               />
                             </>
                           )}
-                          avatar={<Avatar icon={<AntDesignOutlined />} />}
+                          avatar={message.role === "user" ? <Avatar src={avatarUrl || undefined} /> : <Avatar style={{ backgroundColor: '#10b981', color: '#fff' }} icon={<RobotOutlined />} />}
+                        />
+                      );
+                    case "tool-call":
+                    case "tool-invocation":
+                      return (
+                        <Bubble
+                          placement="start"
+                          key={`${message.id}-${i}`}
+                          content={`${(part as any).toolName ? `正在调用 ${(part as any).toolName}...` : '正在分析...'}`}
+                          avatar={<Avatar style={{ backgroundColor: '#10b981', color: '#fff' }} icon={<RobotOutlined />} />}
                         />
                       );
                     default:
@@ -293,6 +308,7 @@ export default function Chat() {
             );
           })}
         </Flex>
+        )}
       </div>
       <Sender
         loading={loading}

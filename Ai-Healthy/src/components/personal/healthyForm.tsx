@@ -1,4 +1,4 @@
-import {Modal, Form, Input ,Row,Col,Radio, message} from 'antd'
+import {Modal, Form, Input, InputNumber, Row,Col,Radio, message} from 'antd'
 import { createHealthyInfo, getHealthyInfo, updateHealthyInfo } from '../../api/person';
 import { useEffect, useState } from 'react';
 interface propsType{
@@ -111,7 +111,7 @@ export default function HealthyForm({isModle,setModleDown,userId}:propsType) {
                 name="height"
                 rules={[{ required: true, message: '请输入身高!' }]}
               >
-                <Input />
+                <InputNumber style={{ width: '100%' }} />
               </Form.Item>
           </Col> 
           <Col span={24}>
@@ -120,7 +120,7 @@ export default function HealthyForm({isModle,setModleDown,userId}:propsType) {
                 name="age"
                 rules={[{ required: true, message: '请输入年龄!' }]}
               >
-                <Input />
+                <InputNumber style={{ width: '100%' }} />
               </Form.Item>
           </Col> 
           <Col span={24}>
@@ -129,9 +129,9 @@ export default function HealthyForm({isModle,setModleDown,userId}:propsType) {
               name="weight"
               rules={[{ required: true, message: '请输入体重!' }]}
             >
-              <Input />
+              <InputNumber style={{ width: '100%' }} />
             </Form.Item>
-          </Col> 
+          </Col>
           <Col span={24}>
             <Form.Item
               label="饮食习惯与身体状况" 

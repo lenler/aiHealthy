@@ -12,6 +12,7 @@ import type { Dayjs } from 'dayjs';
 import RecordCard from '../../components/analysis/recordCard';
 import { createRecord, getMealData, updateRecord, uploadImage} from '../../api/analysis';
 import useInfoStore from '../../store/infoStore';
+import useAuthStore from '../../store/authStore';
 
 type MealSource = 'AI 识别' | '手动录入';
 interface MealGroup {
@@ -28,35 +29,6 @@ interface AIDraftItem {
   foodName: string;
   calories: number;
 }
-const mealGroups: MealGroup[] = [
-  {
-    mealType: 'Breakfast',
-    title: '早餐',
-    currentCalories: 320,
-    foodName: '鸡胸肉藜麦沙拉',
-    calories: 450,
-    source: 'AI 识别',
-    imgUrl:'https://picsum.photos/200/301',
-  },
-  {
-   mealType: 'Lunch',
-    title: '午餐',
-    currentCalories: 680,
-    foodName: '鸡胸肉藜麦沙拉',
-    calories: 450,
-    source: 'AI 识别',
-    imgUrl:'https://picsum.photos/200/301',
-  },
-  {
-   mealType: 'Dinner',
-    title: '晚餐',
-    currentCalories: 0,
-    foodName: '鸡胸肉藜麦沙拉',
-    calories: 450,
-    source: 'AI 识别',
-    imgUrl:'https://picsum.photos/200/301',
-  },
-];
 const draftColumns = [
   {
     title: '食物名称',
@@ -70,8 +42,8 @@ const draftColumns = [
   },
 ];
 export default function Analysis() {
-  const userId=localStorage.getItem('userId');
-  const [mealData,setMealdata]=useState<MealGroup[]>(mealGroups)
+  const userId=useAuthStore((state:any)=>state.userId);
+  const [mealData,setMealdata]=useState<MealGroup[]>([])
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs(new Date()));
   const [mealType, setMealType] = useState<string>("Dinner");
   // const [draftData, setDraftData] = useState<AIDraftItem[]>([]);
@@ -193,15 +165,9 @@ export default function Analysis() {
     const exists = mealData.some((item) => item.mealType === mealType);
     try{
       if(exists){
-        const res=await updateRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
-        if(!res){
-          console.log('请求失败请重新请求');
-        }
+        await updateRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
       }else{
-        const res=await createRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
-        if(!res){
-          console.log('请求失败请重新请求');  
-        }
+        await createRecord(userId!,{foodName:thisFoodName,calories:thisCalories,mealType:mealType,imgUrl:imgUrl})
       }
     }catch(err){
       message.error('更新失败');

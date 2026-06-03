@@ -4,7 +4,7 @@ import useAuthStore from "../../store/authStore";
 import { useEffect, useState } from "react";
 import AccountForm from "../../components/personal/accountForm";
 import HealthyForm from "../../components/personal/healthyForm";
-import { getAccountInfo, getAvatarUploadSign, getHealthyInfo, updateAvatar } from "../../api/person";
+import { getAccountInfo, getHealthyInfo, updateAvatar, uploadAvatar } from "../../api/person";
 import type { UploadProps } from 'antd';
 
 interface HealthyInfo{
@@ -43,7 +43,7 @@ export default function Personal() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isHealthyModalOpen, setIsHealthyModalOpen] = useState(false);
   const [healthyInfo, setHealthyInfo] = useState<HealthyInfo>()
-  const userId=localStorage.getItem('userId')
+  const userId=useAuthStore((state:any)=>state.userId)
   const navigator=useNavigate()
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -91,32 +91,19 @@ export default function Personal() {
     try {
       setUploading(true);
       const targetFile = file as File;
-      const signRes = await getAvatarUploadSign(targetFile.name);
-      const signData = signRes?.data?.data;
-      if (!signData?.host || !signData?.policy || !signData?.signature || !signData?.accessid || !signData?.key) {
-        throw new Error('签名信息不完整');
-      }
       const formData = new FormData();
-      formData.append('key', signData.key);
-      formData.append('policy', signData.policy);
-      formData.append('OSSAccessKeyId', signData.accessid);
-      formData.append('Signature', signData.signature);
-      formData.append('success_action_status', signData.successActionStatus || '200');
       formData.append('file', targetFile);
-      const uploadResp = await fetch(signData.host, {
-        method: 'POST',
-        body: formData
-      });
-      if (!uploadResp.ok) {
-        throw new Error('OSS上传失败');
+      const res = await uploadAvatar(formData);
+      if (res.data.status) {
+        const avatarUrl = res.data.data.avatarUrl;
+        await updateAvatar(userId, { avatarUrl });
+        setAvatarUrl(avatarUrl);
+        useAuthStore.getState().updateAvatar(avatarUrl);
+        message.success('头像上传成功');
+        onSuccess?.(res.data, file as any);
+      } else {
+        throw new Error(res.data.message || '上传失败');
       }
-      await updateAvatar(userId, {
-        avatarUrl: signData.url,
-        avatarObjectKey: signData.key
-      });
-      setAvatarUrl(signData.url);
-      message.success('头像上传成功');
-      onSuccess?.({}, file as any);
     } catch (error: any) {
       message.error(error?.message || '头像上传失败');
       onError?.(error);
@@ -127,15 +114,23 @@ export default function Personal() {
 
   useEffect(()=>{
     async function getUserHealth() {
-      const res=await getHealthyInfo(userId!)
-      const data = res.data.data
-      setHealthyInfo(data)
+      try {
+        const res=await getHealthyInfo(userId!)
+        const data = res.data.data
+        setHealthyInfo(data)
+      } catch {
+        message.error('获取健康信息失败')
+      }
     }
     async function getUserAccount() {
-      const res = await getAccountInfo(userId!);
-      const data = res?.data?.data;
-      if (data?.avatarUrl) {
-        setAvatarUrl(data.avatarUrl);
+      try {
+        const res = await getAccountInfo(userId!);
+        const data = res?.data?.data;
+        if (data?.avatarUrl) {
+          setAvatarUrl(data.avatarUrl);
+        }
+      } catch {
+        message.error('获取账户信息失败')
       }
     }
     if (!userId) {
@@ -161,7 +156,7 @@ export default function Personal() {
                   <h3>{healthyInfo.height}</h3><span>当前身高(cm)</span>
                 </div>
                 <div className="stat-item">
-                  <h3>{Number(healthyInfo.weight/(healthyInfo.height*healthyInfo.height/10000)).toFixed(1)}</h3><span>当前bim值</span>
+                  <h3>{healthyInfo.height > 0 ? Number(healthyInfo.weight/(healthyInfo.height*healthyInfo.height/10000)).toFixed(1) : '--'}</h3><span>当前bim值</span>
                 </div>
               </>
             )

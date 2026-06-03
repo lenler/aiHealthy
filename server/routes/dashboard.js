@@ -1,60 +1,28 @@
 import express from "express";
-import dotenv from "dotenv";
+import OpenAI from "openai";
 import { createRequire } from "module";
 import { applyPrivateCache } from "../middleware/cache.js";
+import { normalizeMealType } from "../utils/meal.js";
 const require = createRequire(import.meta.url);
-const { User, Record, MealItem, HealthyInfo } = require("../models/index.cjs");
-const { OpenAI } = require("openai");
-dotenv.config();
+const { MealItem, HealthyInfo } = require("../models/index.cjs");
 const Router = express.Router();
-// 格式转换 避免前端传入小写字母导致请求不能通过数据库模型验证
-function normalizeMealType(type) {
-  if (!type) {
-    return type;
-  }
-  const t = type.toLowerCase();
-  if (t === "breakfast") {
-    return "Breakfast";
-  }
-  if (t === "lunch") {
-    return "Lunch";
-  }
-  if (t === "dinner") {
-    return "Dinner";
-  }
-  if (t === "snack") {
-    return "Snack";
-  }
-  return type;
-}
+
 /**
  * 1.获取首页综合数据
- *{
-    breakfast: { name:string,calories:number},
-    lunch: { name:string,calories:number},
-    dinner: { name:string,calories:number}
- * } 
  */
 Router.get("/:userId", applyPrivateCache(30), async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
     const today = new Date().toISOString().split("T")[0];
     const yesterdayDate = new Date();
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
     const yesterday = yesterdayDate.toISOString().split("T")[0];
-    const todayMeal = await MealItem.findAll({
-      where: {
-        userId: userId,
-        date: today,
-      },
-    });
 
-    const yesterdayMeal = await MealItem.findAll({
-      where: {
-        userId: userId,
-        date: yesterday,
-      },
-    });
+    const [todayMeal, yesterdayMeal, healthyInfo] = await Promise.all([
+      MealItem.findAll({ where: { userId, date: today }, limit: 50 }),
+      MealItem.findAll({ where: { userId, date: yesterday }, limit: 50 }),
+      HealthyInfo.findOne({ where: { userId }, order: [["updatedAt", "DESC"]] }),
+    ]);
 
     const formatMeals = (meals) => {
       const getMeal = (type) => {
@@ -76,8 +44,15 @@ Router.get("/:userId", applyPrivateCache(30), async (req, res) => {
       };
     };
 
+    let targetCalories = 2000;
+    if (healthyInfo && healthyInfo.weight && healthyInfo.height && healthyInfo.age) {
+      const { weight, height, age, sex } = healthyInfo;
+      let bmr = 10 * weight + 6.25 * height - 5 * age;
+      bmr += sex === 1 ? 5 : -161;
+      targetCalories = Math.round(bmr * 1.2);
+    }
+
     const data = {
-      // 死数据 模拟数据
       todayRecord: {
         date: today,
         meals: formatMeals(todayMeal),
@@ -89,12 +64,11 @@ Router.get("/:userId", applyPrivateCache(30), async (req, res) => {
       summary: {
         calories: {
           current: todayMeal.reduce((acc, cur) => acc + cur.calories, 0),
-          target: 2000,
+          target: targetCalories,
           unit: "kcal",
         },
       },
     };
-    console.log(data);
 
     return res.status(200).json({
       status: true,
@@ -102,23 +76,14 @@ Router.get("/:userId", applyPrivateCache(30), async (req, res) => {
       data,
     });
   } catch (error) {
-    console.log("查询记录失败", error.message);
-    res.status(400).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("查询记录失败", error.message);
+    res.status(500).json({ status: false, message: "查询失败，请稍后重试" });
   }
 });
 Router.put("/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
     const { foodName, calories, mealType } = req.body;
-    if (!userId) {
-      return res.status(400).json({
-        status: false,
-        message: "用户ID不能为空",
-      });
-    }
     if (!foodName) {
       return res.status(400).json({
         status: false,
@@ -158,23 +123,14 @@ Router.put("/:userId", async (req, res) => {
       message: "更新成功",
     });
   } catch (error) {
-    console.log("更新失败", error.message);
-    res.status(400).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("更新失败", error.message);
+    res.status(500).json({ status: false, message: "更新失败，请稍后重试" });
   }
 });
 Router.delete("/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
     const mealType = req.body.mealType || req.query.mealType;
-    if (!userId) {
-      return res.status(400).json({
-        status: false,
-        message: "用户ID不能为空",
-      });
-    }
     const normalizedMealType = normalizeMealType(mealType);
     if (!normalizedMealType) {
       return res.status(400).json({
@@ -195,23 +151,14 @@ Router.delete("/:userId", async (req, res) => {
       message: "删除成功",
     });
   } catch (error) {
-    console.log("删除失败", error.message);
-    res.status(400).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("删除失败", error.message);
+    res.status(500).json({ status: false, message: "删除失败，请稍后重试" });
   }
 });
 Router.post("/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
     const { foodName, calories, mealType } = req.body;
-    if (!userId) {
-      return res.status(400).json({
-        status: false,
-        message: "用户ID不能为空",
-      });
-    }
     if (!foodName) {
       return res.status(400).json({
         status: false,
@@ -257,11 +204,8 @@ Router.post("/:userId", async (req, res) => {
       message: "添加成功",
     });
   } catch (error) {
-    console.log("添加失败", error.message);
-    res.status(400).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("添加失败", error.message);
+    res.status(500).json({ status: false, message: "添加失败，请稍后重试" });
   }
 });
 
@@ -272,13 +216,7 @@ const openai = new OpenAI({
 });
 
 Router.get("/advice/:userId", applyPrivateCache(30), async (req, res) => {
-  const userId = req.params.userId;
-  if (!userId) {
-    return res.status(400).json({
-      status: false,
-      message: "用户ID不能为空",
-    });
-  }
+  const userId = req.userId;
   try {
     const healthyInfo = await HealthyInfo.findOne({
       where: { userId },
@@ -340,7 +278,7 @@ Router.get("/advice/:userId", applyPrivateCache(30), async (req, res) => {
       data: result,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({
       status: false,
       message: "获取建议失败",

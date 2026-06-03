@@ -1,4 +1,5 @@
-import { Card, Progress, Row, Col, Typography, Avatar, Skeleton, Spin} from 'antd'
+import { Card, Progress, Row, Col, Typography, Avatar, Skeleton, Spin, message, Button} from 'antd'
+import { ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { getAiAdvice, getOverview, removeRecord} from '../../api/dashboard/index'
 import { useEffect, useState } from 'react'
@@ -6,6 +7,7 @@ import RecordCard from '../../components/dashborad/recordCard'
 import './index.scss'
 const { Title, Text } = Typography;
 import RecordForm from '../../components/dashborad/recordForm'
+import useAuthStore from '../../store/authStore'
 import useInfoStore from '../../store/infoStore'
 
 export interface MacroInfo {
@@ -55,8 +57,10 @@ export interface DashboardOverviewData {
   yesterdayRecord: DailyRecord;
 }
 export default function DashBorad() {
-  const nickName=localStorage.getItem('nickName')
+  const nickName=useAuthStore((state:any)=>state.userNickName)
+  const avatarUrl=useAuthStore((state:any)=>state.avatarUrl)
   const [loading,setLoading]=useState<boolean>(true)
+  const [adviceLoading, setAdviceLoading] = useState(false)
   const [summary,setSummary]=useState<DashboardSummary>()
   const [todayRecord,setTodayRecord]=useState<DailyRecord>()
   const [yesterdayRecord,setYesterdayRecord]=useState<DailyRecord>()
@@ -73,7 +77,7 @@ export default function DashBorad() {
     lunch: '午餐',
     dinner: '晚餐'
   };
-  const userId=localStorage.getItem('userId')
+  const userId=useAuthStore((state:any)=>state.userId)
   /**
    * 辅助函数
    * 获取指定记录的餐次名称,热量,图片的函数
@@ -81,55 +85,51 @@ export default function DashBorad() {
    * 按照时间输出对应的问候语
    */
   // 函数 获取ai建议
-  async function fetchAiAdvice() {
+  async function fetchAiAdvice(force = false) {
     const today = getTime()
     if (!userId) return
-    //检查当前时间是否和状态中建议创建时间相同
-    if(lastFetchDate !== today){
-      //发送请求
-      try{
-        // 获取ai的建议 将ai的回复存储在全局状态中
-        const res=await getAiAdvice(userId)
-        console.log(res);
-        if (res.data.status && res.data.data) {
-           const { advice, targetCalories } = res.data.data
-           setAiData(advice, targetCalories)
-           updateLastFetchDate(today)
-        }
-      }catch(error:any){
-        console.log(error);
+    if (!force && lastFetchDate === today) return
+    try {
+      const res = await getAiAdvice(userId)
+      if (res.data.status && res.data.data) {
+        const { advice, targetCalories } = res.data.data
+        setAiData(advice, targetCalories)
+        updateLastFetchDate(today)
       }
+    } catch (error: any) {
+      console.log(error);
+      message.error('获取AI建议失败')
     }
   }
   // 辅助函数 获取餐次名称
   function getMealName(record:DailyRecord,type:string){
     if(type=='breakfast'){
-      return record.meals.breakfast.name
+      return record.meals?.breakfast?.name ?? ''
     }else if(type=='lunch'){
-      return record.meals.lunch.name
+      return record.meals?.lunch?.name ?? ''
     }else{
-      return record.meals.dinner.name
+      return record.meals?.dinner?.name ?? ''
     }
   }
   // 辅助函数 获取餐次热量
   function getCalories(record:DailyRecord,type:string){
     if(type=='breakfast'){
-      return record.meals.breakfast.calories
+      return record.meals?.breakfast?.calories ?? 0
     }else if(type=='lunch'){
-      return record.meals.lunch.calories
+      return record.meals?.lunch?.calories ?? 0
     }else{
-      return record.meals.dinner.calories
+      return record.meals?.dinner?.calories ?? 0
     }
   }
 
   // 辅助函数 获取餐次图片
   function getMealImg(record:DailyRecord,type:string){
     if(type=='breakfast'){
-      return record.meals.breakfast.img
+      return record.meals?.breakfast?.img ?? ''
     }else if(type=='lunch'){
-      return record.meals.lunch.img
+      return record.meals?.lunch?.img ?? ''
     }else{
-      return record.meals.dinner.img
+      return record.meals?.dinner?.img ?? ''
     }
   } 
   function getHello(){
@@ -208,6 +208,7 @@ export default function DashBorad() {
       setYesterdayRecord(data.yesterdayRecord)
     } catch (error) {
       console.log(error)
+      message.error('获取首页数据失败')
     } finally {
       setLoading(false)
     }
@@ -220,6 +221,7 @@ export default function DashBorad() {
       refresh()
     }catch(error){
       console.log(error)
+      message.error('删除失败')
     }
   }
   useEffect(() => {
@@ -239,7 +241,7 @@ export default function DashBorad() {
                 </div>
               </Col>
               <Col span={4}>
-                <Avatar size={48} className="user-avatar" />
+                <Avatar size={48} src={avatarUrl || undefined} className="user-avatar" />
               </Col>
             </Row>
           </Card>
@@ -251,7 +253,7 @@ export default function DashBorad() {
                 <Progress
                   type="circle"
                   // 计算百分比 当前摄入量/总摄入量 * 100
-                  percent={summary?.calories.current ? summary?.calories.current/targetCalories*100:0}
+                  percent={summary?.calories.current ? Math.min(summary?.calories.current/targetCalories*100, 100) : 0}
                   size={120}
                   strokeColor="#10b981"
                   railColor="#e2e8f0"
@@ -265,7 +267,11 @@ export default function DashBorad() {
               </Col>
               {/* 宏元素统计卡片 */}
               <Col xs={24} sm={14} md={16}>
-                <h2 style={{fontWeight:'800',fontFamily:'ui-rounded',marginBottom:'6px'}}>AI建议:</h2>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'6px'}}>
+                  <h2 style={{fontWeight:'800',fontFamily:'ui-rounded',margin:0}}>AI建议:</h2>
+                  <Button type="text" icon={<ReloadOutlined />} loading={adviceLoading}
+                    onClick={async () => { setAdviceLoading(true); await fetchAiAdvice(true); setAdviceLoading(false); }} />
+                </div>
                 <Text type="secondary" style={{fontFamily:'ui-rounded',marginBottom:'6px'}}>AI推荐今日可摄入热量:{targetCalories}</Text>
                 <div className="macro-stats" >
                     {
