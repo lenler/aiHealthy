@@ -16,8 +16,9 @@ export function updateRecord(userId:string,data:any){
 
 // 上传图片
 export function uploadImage(formData: FormData) {
-    return http.post('/api/analysis/upload', formData,{
-        headers: { 'Content-Type': 'multipart/form-data' } // 声明文件上传格式
+    return http.post('/api/analysis/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000, // AI识图需要较长时间
     })
 }
 
